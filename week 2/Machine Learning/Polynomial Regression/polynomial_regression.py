@@ -200,9 +200,9 @@ def visualize_all_degrees(X, y, y_true):
     fig.suptitle("Polynomial Regression — Underfitting vs Good Fit vs Overfitting",
                  color="white", fontsize=14, fontweight="bold", y=0.98)
 
-    plt.savefig("/home/claude/polynomial_regression_project/polynomial_regression_plot.png",
+    plt.savefig("polynomial_regression_plot.png",
                 dpi=150, bbox_inches="tight", facecolor="#0f0f1a")
-    print("\n✅  Plot saved!")
+    print("\n✅  Plot saved as polynomial_regression_plot.png")
     plt.close()
 
 
