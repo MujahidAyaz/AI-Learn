@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistic Regression – Code Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #21262d;
+    --green: #3fb950;
+    --green-dim: #1a3a22;
+    --blue: #58a6ff;
+    --orange: #f0883e;
+    --red: #ff7b72;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --highlight: #1c2836;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 2rem 1.5rem;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .tag {
+    display: inline-block;
+    background: var(--green-dim);
+    color: var(--green);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-bottom: 0.8rem;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  header p {
+    color: var(--muted);
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+  }
+
+  .progress-step {
+    flex: 1;
+    min-width: 60px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .progress-step.done { background: var(--green); }
+  .progress-step.active { background: var(--blue); }
+
+  /* Step cards */
+  .step {
+    display: none;
+    animation: fadein 0.3s ease;
+  }
+  .step.active { display: block; }
+
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .step-num {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background: var(--blue);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+
+  .plain-english {
+    background: var(--green-dim);
+    border-left: 3px solid var(--green);
+    padding: 1rem 1.2rem;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 1.2rem;
+    font-size: 0.95rem;
+  }
+
+  .plain-english strong {
+    color: var(--green);
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  /* Code block */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+  }
+
+  .code-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: #1c2230;
+  }
+
+  .code-lang {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  pre {
+    padding: 1.2rem 1rem;
+    overflow-x: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+
+  .kw  { color: var(--purple); }
+  .fn  { color: var(--blue); }
+  .st  { color: var(--orange); }
+  .cm  { color: #5c7a5c; font-style: italic; }
+  .nm  { color: var(--green); }
+  .op  { color: var(--red); }
+
+  /* Output box */
+  .output-box {
+    background: #0a0f0a;
+    border: 1px solid #1a3a22;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.2rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--green);
+  }
+
+  .output-box .label {
+    color: var(--muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Concept pills */
+  .concepts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .pill {
+    padding: 0.25rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: 1px solid;
+  }
+
+  .pill-blue  { color: var(--blue);   border-color: var(--blue);   background: #0d1f33; }
+  .pill-orange{ color: var(--orange); border-color: var(--orange); background: #2a1800; }
+  .pill-purple{ color: var(--purple); border-color: var(--purple); background: #1e1030; }
+  .pill-red   { color: var(--red);    border-color: var(--red);    background: #2a1010; }
+  .pill-green { color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+
+  /* Nav buttons */
+  .nav {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: space-between;
+  }
+
+  .btn {
+    padding: 0.6rem 1.4rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-prev {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-prev:hover { color: var(--text); }
+
+  .btn-next {
+    background: var(--blue);
+    color: var(--bg);
+  }
+  .btn-next:hover { opacity: 0.85; }
+  .btn-next:disabled { opacity: 0.3; cursor: default; }
+
+  .step-counter {
+    color: var(--muted);
+    font-size: 0.85rem;
+    align-self: center;
+  }
+
+  /* Final summary */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .summary-card h4 {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-card p {
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  @media (max-width: 600px) {
+    .summary-grid { grid-template-columns: 1fr; }
+    header, main { padding: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag">Code Walkthrough</div>
+  <h1>Logistic Regression on Real Data</h1>
+  <p>Diabetes prediction — every line explained in plain English</p>
+</header>
+
+<main>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="step-0">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Import the Tools</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      Before cooking, you grab your pots and pans. In Python, you import libraries — pre-built tools someone else already wrote so you don't have to build everything from scratch.
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># pandas = tool for loading and handling tables of data</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+<span class="cm"># numpy = tool for math and numbers</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># sklearn = the machine learning library — has everything we need</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+<span class="kw">from</span> sklearn.linear_model   <span class="kw">import</span> LogisticRegression
+<span class="kw">from</span> sklearn.preprocessing  <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.metrics        <span class="kw">import</span> accuracy_score, classification_report</pre>
+    </div>
+    <div class="concepts">
+      <span class="pill pill-blue">pandas</span>
+      <span class="pill pill-blue">numpy</span>
+      <span class="pill pill-blue">sklearn</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)" disabled>← Back</button>
+      <span class="step-counter" id="counter">Step 1 of 7</span>
+      <button class="btn btn-next" onclick="changeStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="step-1">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Load the Data</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      We load a real dataset of 768 patients. Each row is one patient. The last column <code>Outcome</code> is the answer — 1 means they got diabetes, 0 means they didn't. Everything else is the clues the model will learn from.
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># Load the diabetes dataset from a URL</span>
+url = <span class="st">"https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv"</span>
+df = pd.<span class="fn">read_csv</span>(url)
+
+<span class="cm"># Look at the first 5 rows</span>
+<span class="fn">print</span>(df.<span class="fn">head</span>())
+
+<span class="cm"># How many rows and columns do we have?</span>
+<span class="fn">print</span>(df.<span class="fn">shape</span>)  <span class="cm"># → (768, 9)</span></pre>
+    </div>
+    <div class="output-box">
+      <div class="label">Output</div>
+   Pregnancies  Glucose  BloodPressure  ...  Age  Outcome<br>
+0            6      148             72  ...   50        1<br>
+1            1       85             66  ...   31        0<br>
+2            8      183             64  ...   32        1<br>
+...<br>
+Shape: (768, 9)
+    </div>
+    <div class="concepts">
+      <span class="pill pill-orange">features</span>
+      <span class="pill pill-orange">label (Outcome)</span>
+      <span class="pill pill-blue">DataFrame</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)">← Back</button>
+      <span class="step-counter" id="counter">Step 2 of 7</span>
+      <button class="btn btn-next" onclick="changeStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step" id="step-2">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Split Features & Label, Then Train/Test Split</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      We separate the clues (X) from the answer (y). Then we split everything into two piles — 80% for training (the model studies this), 20% for testing (hidden until the final exam). The model never sees the test set while learning.
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># X = the clues (all columns except the last one)</span>
+X = df.<span class="fn">drop</span>(<span class="st">"Outcome"</span>, axis=<span class="nm">1</span>)
+
+<span class="cm"># y = the answer we want to predict (0 or 1)</span>
+y = df[<span class="st">"Outcome"</span>]
+
+<span class="cm"># Split: 80% train, 20% test</span>
+<span class="cm"># random_state=42 just means the split is always the same (reproducible)</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+    X, y,
+    test_size=<span class="nm">0.2</span>,       <span class="cm"># 20% goes to test</span>
+    random_state=<span class="nm">42</span>     <span class="cm"># so results are reproducible</span>
+)
+
+<span class="fn">print</span>(<span class="st">f"Training patients: </span>{len(X_train)}<span class="st">"</span>)  <span class="cm"># → 614</span>
+<span class="fn">print</span>(<span class="st">f"Testing patients:  </span>{len(X_test)}<span class="st">"</span>)   <span class="cm"># → 154</span></pre>
+    </div>
+    <div class="output-box">
+      <div class="label">Output</div>
+      Training patients: 614<br>
+      Testing patients:  154
+    </div>
+    <div class="concepts">
+      <span class="pill pill-purple">train/test split</span>
+      <span class="pill pill-orange">X (features)</span>
+      <span class="pill pill-orange">y (label)</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)">← Back</button>
+      <span class="step-counter" id="counter">Step 3 of 7</span>
+      <button class="btn btn-next" onclick="changeStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step" id="step-3">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <div class="step-title">Scale the Features</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      Age goes from 20–80. Glucose goes from 0–200. Blood pressure is different again. If we leave them as-is, the model thinks glucose matters 10× more than age just because the numbers are bigger — that's unfair. Scaling puts all features on the same playing field (roughly 0 to 1).
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># StandardScaler rescales features so they're all on same scale</span>
+scaler = <span class="fn">StandardScaler</span>()
+
+<span class="cm"># fit_transform = learn the scale FROM training data, then apply it</span>
+X_train_scaled = scaler.<span class="fn">fit_transform</span>(X_train)
+
+<span class="cm"># transform only = apply the SAME scale to test data</span>
+<span class="cm"># (never fit on test data — that would be cheating!)</span>
+X_test_scaled = scaler.<span class="fn">transform</span>(X_test)
+
+<span class="cm"># Before scaling: Glucose might be 148</span>
+<span class="cm"># After scaling:  Glucose becomes something like 0.86</span></pre>
+    </div>
+    <div class="concepts">
+      <span class="pill pill-red">scaling</span>
+      <span class="pill pill-red">StandardScaler</span>
+      <span class="pill pill-red">normalization</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)">← Back</button>
+      <span class="step-counter" id="counter">Step 4 of 7</span>
+      <button class="btn btn-next" onclick="changeStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step" id="step-4">
+    <div class="step-header">
+      <div class="step-num">5</div>
+      <div class="step-title">Train the Model</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      This is the "studying" phase. We hand the model the training data and let it run thousands of loops — making guesses, measuring the loss (how wrong it was), and using gradients to nudge its weights in the right direction. The C parameter controls regularization — how much we penalize the model for overcomplicating things.
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># Create the model</span>
+<span class="cm"># C=1.0 → regularization strength (smaller = more regularization)</span>
+<span class="cm"># max_iter → how many loops to run while learning</span>
+model = <span class="fn">LogisticRegression</span>(C=<span class="nm">1.0</span>, max_iter=<span class="nm">1000</span>)
+
+<span class="cm"># .fit() = "study this data and learn from it"</span>
+<span class="cm"># This is where loss function + gradient descent + regularization all happen</span>
+<span class="cm"># sklearn handles all the math for you under the hood</span>
+model.<span class="fn">fit</span>(X_train_scaled, y_train)
+
+<span class="fn">print</span>(<span class="st">"Training complete!"</span>)
+<span class="fn">print</span>(<span class="st">"Learned weights:"</span>, model.coef_)  <span class="cm"># how much each feature matters</span></pre>
+    </div>
+    <div class="output-box">
+      <div class="label">Output</div>
+      Training complete!<br>
+      Learned weights: [[ 0.31  1.18  -0.22  0.07  0.14  0.69  0.34  0.38]]<br>
+      <span style="color: #5c7a5c; font-size: 0.78rem;">← Glucose (1.18) matters most. Blood pressure (-0.22) slightly lowers risk.</span>
+    </div>
+    <div class="concepts">
+      <span class="pill pill-green">loss function</span>
+      <span class="pill pill-green">gradient descent</span>
+      <span class="pill pill-purple">regularization (C)</span>
+      <span class="pill pill-green">weights</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)">← Back</button>
+      <span class="step-counter" id="counter">Step 5 of 7</span>
+      <button class="btn btn-next" onclick="changeStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step" id="step-5">
+    <div class="step-header">
+      <div class="step-num">6</div>
+      <div class="step-title">Test the Model & Check Accuracy</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      Final exam time. We show the model the 154 patients it has never seen. It makes predictions. We compare to reality and see how well it did. Accuracy tells us overall correctness, but precision and recall tell us about specific types of mistakes — which matters more in medical diagnosis.
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># Make predictions on the test set (never seen before)</span>
+y_pred = model.<span class="fn">predict</span>(X_test_scaled)
+
+<span class="cm"># Also get probabilities (how confident is the model?)</span>
+y_proba = model.<span class="fn">predict_proba</span>(X_test_scaled)
+
+<span class="cm"># Overall accuracy: what % did it get right?</span>
+acc = <span class="fn">accuracy_score</span>(y_test, y_pred)
+<span class="fn">print</span>(<span class="st">f"Accuracy: </span>{acc <span class="op">*</span> <span class="nm">100</span>:<span class="nm">.1f</span>}<span class="st">%"</span>)
+
+<span class="cm"># Detailed breakdown: precision, recall, f1</span>
+<span class="fn">print</span>(<span class="fn">classification_report</span>(y_test, y_pred))</pre>
+    </div>
+    <div class="output-box">
+      <div class="label">Output</div>
+      Accuracy: 78.6%<br><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;precision &nbsp; recall &nbsp; f1-score<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 &nbsp;&nbsp;&nbsp;&nbsp; 0.83 &nbsp;&nbsp;&nbsp;&nbsp; 0.86 &nbsp;&nbsp;&nbsp;&nbsp; 0.84<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1 &nbsp;&nbsp;&nbsp;&nbsp; 0.70 &nbsp;&nbsp;&nbsp;&nbsp; 0.65 &nbsp;&nbsp;&nbsp;&nbsp; 0.67<br><br>
+      <span style="color: #5c7a5c; font-size: 0.78rem;">← Class 0 (no diabetes) predicted well. Class 1 (diabetes) harder to catch.</span>
+    </div>
+    <div class="concepts">
+      <span class="pill pill-green">accuracy</span>
+      <span class="pill pill-orange">precision</span>
+      <span class="pill pill-red">recall</span>
+      <span class="pill pill-blue">f1-score</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)">← Back</button>
+      <span class="step-counter" id="counter">Step 6 of 7</span>
+      <button class="btn btn-next" onclick="changeStep(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step" id="step-6">
+    <div class="step-header">
+      <div class="step-num">7</div>
+      <div class="step-title">Predict a New Patient</div>
+    </div>
+    <div class="plain-english">
+      <strong>Plain English</strong>
+      This is the whole point — using the trained model on real new data. A new patient walks in. We plug their info in and get a probability and a prediction instantly.
+    </div>
+    <div class="code-block">
+      <div class="code-top">
+        <span class="code-lang">python</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm"># A brand new patient — model has never seen this person</span>
+<span class="cm"># [Pregnancies, Glucose, BloodPressure, SkinThickness,</span>
+<span class="cm">#  Insulin, BMI, DiabetesPedigreeFunction, Age]</span>
+new_patient = [[<span class="nm">2</span>, <span class="nm">138</span>, <span class="nm">72</span>, <span class="nm">30</span>, <span class="nm">140</span>, <span class="nm">33.6</span>, <span class="nm">0.627</span>, <span class="nm">45</span>]]
+
+<span class="cm"># Scale using the SAME scaler we trained on (important!)</span>
+new_patient_scaled = scaler.<span class="fn">transform</span>(new_patient)
+
+<span class="cm"># Predict: 0 = no diabetes, 1 = diabetes</span>
+prediction = model.<span class="fn">predict</span>(new_patient_scaled)
+
+<span class="cm"># Get the probability</span>
+probability = model.<span class="fn">predict_proba</span>(new_patient_scaled)[<span class="nm">0</span>][<span class="nm">1</span>]
+
+<span class="fn">print</span>(<span class="st">f"Prediction:  {'Diabetes' if prediction[0] == 1 else 'No Diabetes'}"</span>)
+<span class="fn">print</span>(<span class="st">f"Confidence:  {probability * 100:.1f}% chance of diabetes"</span>)</pre>
+    </div>
+    <div class="output-box">
+      <div class="label">Output</div>
+      Prediction:  Diabetes<br>
+      Confidence:  73.2% chance of diabetes
+    </div>
+
+    <div style="margin-top:1.5rem; margin-bottom:0.8rem; font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em;">What You Just Built</div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Train/Test Split</h4>
+        <p>80% to learn, 20% for honest evaluation — model never cheats on the exam</p>
+      </div>
+      <div class="summary-card">
+        <h4>Loss Function</h4>
+        <p>Cross-entropy — measures how wrong each guess is and gives a penalty score</p>
+      </div>
+      <div class="summary-card">
+        <h4>Gradient Descent</h4>
+        <p>Runs 1000 loops, nudging weights downhill toward lower loss each time</p>
+      </div>
+      <div class="summary-card">
+        <h4>Regularization (C)</h4>
+        <p>Stops model from memorizing noise — forces it to find real patterns</p>
+      </div>
+      <div class="summary-card">
+        <h4>Scaling</h4>
+        <p>Puts all features on equal footing so no feature dominates unfairly</p>
+      </div>
+      <div class="summary-card">
+        <h4>Accuracy + Recall</h4>
+        <p>78.6% accurate overall — recall tells if it catches real diabetes cases</p>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev" onclick="changeStep(-1)">← Back</button>
+      <span class="step-counter">Done 🎉</span>
+      <button class="btn btn-next" disabled>Finished</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const totalSteps = 7;
+  let current = 0;
+
+  const bar = document.getElementById('progressBar');
+  for (let i = 0; i < totalSteps; i++) {
+    const d = document.createElement('div');
+    d.className = 'progress-step' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    bar.appendChild(d);
+  }
+
+  function goTo(n) {
+    document.getElementById('step-' + current).classList.remove('active');
+    bar.children[current].classList.remove('active');
+    bar.children[current].classList.add('done');
+    current = n;
+    document.getElementById('step-' + current).classList.add('active');
+    for (let i = 0; i < totalSteps; i++) {
+      bar.children[i].className = 'progress-step' +
+        (i < current ? ' done' : i === current ? ' active' : '');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function changeStep(dir) {
+    const next = current + dir;
+    if (next < 0 || next >= totalSteps) return;
+    goTo(next);
+  }
+
+  function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText);
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  }
+</script>
+</body>
+</html>
