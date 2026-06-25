@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Tree – Code Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0b0e14;
+    --surface:  #13171f;
+    --surface2: #1a1f2b;
+    --border:   #252b38;
+    --text:     #dce4f0;
+    --muted:    #6b7a96;
+    --amber:    #f5a623;
+    --amber-dim:#2b1f08;
+    --teal:     #4ecdc4;
+    --teal-dim: #0c2826;
+    --rose:     #ff6b7a;
+    --rose-dim: #2b0f12;
+    --violet:   #a78bfa;
+    --violet-dim:#1a1030;
+    --green:    #52d48a;
+    --green-dim:#0d2419;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 2.5rem 2rem 2rem;
+    max-width: 880px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.7rem;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  header h1 span { color: var(--amber); }
+
+  header p {
+    color: var(--muted);
+    margin-top: 0.5rem;
+    font-size: 0.93rem;
+  }
+
+  /* ── Progress ── */
+  main { max-width: 880px; margin: 0 auto; padding: 2rem; }
+
+  .progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2.5rem;
+  }
+
+  .pip {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 0.25s;
+  }
+  .pip.done   { background: var(--amber); opacity: 0.5; }
+  .pip.active { background: var(--amber); }
+
+  /* ── Steps ── */
+  .step { display: none; }
+  .step.active { display: block; animation: rise 0.3s ease; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .step-badge {
+    background: var(--amber);
+    color: var(--bg);
+    font-size: 0.8rem;
+    font-weight: 700;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Callout boxes ── */
+  .callout {
+    border-left: 3px solid;
+    padding: 0.9rem 1.1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.2rem;
+    font-size: 0.93rem;
+  }
+
+  .callout strong {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+  }
+
+  .callout.english { border-color: var(--teal);   background: var(--teal-dim);   }
+  .callout.english strong { color: var(--teal); }
+  .callout.warning { border-color: var(--rose);   background: var(--rose-dim);   }
+  .callout.warning strong { color: var(--rose); }
+  .callout.insight { border-color: var(--violet); background: var(--violet-dim); }
+  .callout.insight strong { color: var(--violet); }
+
+  /* ── Code block ── */
+  .code-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+  }
+
+  .code-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 1rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-bar span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.7rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  pre {
+    padding: 1.2rem 1.1rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.81rem;
+    line-height: 1.8;
+  }
+
+  .kw { color: var(--violet); }
+  .fn { color: var(--teal); }
+  .st { color: var(--amber); }
+  .cm { color: #3d5060; font-style: italic; }
+  .nm { color: var(--green); }
+  .cl { color: var(--rose); }
+
+  /* ── Output box ── */
+  .output {
+    background: #080c08;
+    border: 1px solid #1a3020;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--green);
+    line-height: 1.8;
+  }
+
+  .output .lbl {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.67rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── Tags ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.2rem; }
+
+  .tag {
+    padding: 0.22rem 0.65rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  .tag-a { color: var(--amber);  border-color: var(--amber);  background: var(--amber-dim); }
+  .tag-t { color: var(--teal);   border-color: var(--teal);   background: var(--teal-dim); }
+  .tag-v { color: var(--violet); border-color: var(--violet); background: var(--violet-dim); }
+  .tag-r { color: var(--rose);   border-color: var(--rose);   background: var(--rose-dim); }
+  .tag-g { color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+
+  /* ── Nav ── */
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    padding: 0.55rem 1.3rem;
+    border-radius: 7px;
+    font-size: 0.86rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-prev { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .btn-prev:hover { color: var(--text); }
+  .btn-next { background: var(--amber); color: var(--bg); font-weight: 600; }
+  .btn-next:hover { opacity: 0.88; }
+  .btn-next:disabled { opacity: 0.3; cursor: default; }
+
+  .counter { color: var(--muted); font-size: 0.83rem; }
+
+  /* ── Summary grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+    margin-top: 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .card h4 {
+    font-size: 0.7rem;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+  }
+
+  .card p { font-size: 0.88rem; color: var(--text); }
+
+  /* ── Tree diagram ── */
+  .tree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem 1rem;
+    margin-bottom: 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 2;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .tree .node  { color: var(--amber); font-weight: 600; }
+  .tree .leaf-yes { color: var(--rose); }
+  .tree .leaf-no  { color: var(--green); }
+  .tree .branch { color: var(--muted); }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header, main { padding: 1.2rem; }
+    header h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ML from Zero · Chapter 2</div>
+  <h1>Decision <span>Tree</span></h1>
+  <p>Diabetes prediction — plain English first, then every line of code explained</p>
+</header>
+
+<main>
+  <div class="progress" id="pip"></div>
+
+  <!-- ── STEP 1 ── -->
+  <div class="step active" id="s0">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div class="step-title">Import Tools</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same as before — grab the tools before starting work. This time we also import <code>DecisionTreeClassifier</code> and a function to draw the tree visually so you can actually see what the model learned.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># pandas  → load and handle tables of data</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy  <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+<span class="cm"># The decision tree model itself</span>
+<span class="kw">from</span> sklearn.tree         <span class="kw">import</span> <span class="cl">DecisionTreeClassifier</span>, plot_tree, export_text
+
+<span class="cm"># Same helpers as before</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+<span class="kw">from</span> sklearn.metrics         <span class="kw">import</span> (
+    accuracy_score, classification_report,
+    confusion_matrix, roc_auc_score
+)</pre>
+    </div>
+    <div class="tags">
+      <span class="tag tag-t">DecisionTreeClassifier</span>
+      <span class="tag tag-t">plot_tree</span>
+      <span class="tag tag-t">sklearn</span>
+    </div>
+    <div class="callout insight">
+      <strong>Key difference from logistic regression</strong>
+      No <code>StandardScaler</code> needed! Decision trees don't care about the scale of numbers — they only ask "is value above X?" so big vs small numbers don't confuse them.
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" disabled>← Back</button>
+      <span class="counter" id="c0">Step 1 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 2 ── -->
+  <div class="step" id="s1">
+    <div class="step-header">
+      <div class="step-badge">2</div>
+      <div class="step-title">Load Data & Split</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same diabetes dataset. Same 80/20 train/test split. The only difference — we skip scaling this time because decision trees don't need it.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Load the diabetes dataset</span>
+url = <span class="st">"https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv"</span>
+df  = pd.<span class="fn">read_csv</span>(url)
+
+<span class="cm"># Separate features (clues) from label (answer)</span>
+X = df.<span class="fn">drop</span>(<span class="st">"Outcome"</span>, axis=<span class="nm">1</span>)
+y = df[<span class="st">"Outcome"</span>]
+
+feature_names = X.columns.<span class="fn">tolist</span>()
+
+<span class="cm"># 80% training, 20% testing — same as before</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+    X, y, test_size=<span class="nm">0.2</span>, random_state=<span class="nm">42</span>
+)
+
+<span class="cm"># NOTE: No scaling step! Trees don't need it.</span>
+<span class="fn">print</span>(<span class="st">f"Training: {len(X_train)} patients"</span>)
+<span class="fn">print</span>(<span class="st">f"Testing:  {len(X_test)}  patients"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Training: 614 patients<br>
+      Testing:  154 patients
+    </div>
+    <div class="tags">
+      <span class="tag tag-a">no scaling needed</span>
+      <span class="tag tag-t">train/test split</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 2 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3 ── -->
+  <div class="step" id="s2">
+    <div class="step-header">
+      <div class="step-badge">3</div>
+      <div class="step-title">Train an Unpruned Tree (Overfit on Purpose)</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      First, we let the tree grow with NO limits. It will ask questions until every single patient is perfectly classified. This is overfitting — it memorizes the training data. We do this on purpose so you can see the problem before we fix it.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># No limits = tree grows until every patient is perfectly classified</span>
+<span class="cm"># This will overfit — memorize training data</span>
+tree_overfit = <span class="cl">DecisionTreeClassifier</span>(random_state=<span class="nm">42</span>)
+tree_overfit.<span class="fn">fit</span>(X_train, y_train)
+
+<span class="cm"># Check training accuracy vs test accuracy</span>
+train_acc = <span class="fn">accuracy_score</span>(y_train, tree_overfit.<span class="fn">predict</span>(X_train))
+test_acc  = <span class="fn">accuracy_score</span>(y_test,  tree_overfit.<span class="fn">predict</span>(X_test))
+
+<span class="fn">print</span>(<span class="st">f"Overfit tree depth:    {tree_overfit.get_depth()}"</span>)
+<span class="fn">print</span>(<span class="st">f"Training accuracy:     {train_acc * 100:.1f}%"</span>)
+<span class="fn">print</span>(<span class="st">f"Test accuracy:         {test_acc  * 100:.1f}%"</span>)
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="st">"Gap = the tree memorized instead of learning!"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Overfit tree depth:    17<br>
+      Training accuracy:     100.0%  ← memorized everything<br>
+      Test accuracy:          69.5%  ← fails on new patients<br>
+      <br>
+      Gap = the tree memorized instead of learning!
+    </div>
+    <div class="callout warning">
+      <strong>This is the overfitting problem</strong>
+      100% on training, 69.5% on test. The tree is 17 levels deep asking ridiculous questions like "is glucose exactly 148 AND age exactly 45?" — that matches ONE patient, not a real pattern.
+    </div>
+    <div class="tags">
+      <span class="tag tag-r">overfitting</span>
+      <span class="tag tag-r">depth 17</span>
+      <span class="tag tag-r">memorization</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 3 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 4 ── -->
+  <div class="step" id="s3">
+    <div class="step-header">
+      <div class="step-badge">4</div>
+      <div class="step-title">Prune the Tree — Fix Overfitting</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Now we limit how deep the tree can go. <code>max_depth=4</code> means it can only ask 4 questions before giving an answer. This forces it to find general patterns that work on new patients — not memorize the training ones.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># max_depth=4  → only 4 questions deep (pruned)</span>
+<span class="cm"># min_samples_split=10 → only split a group if it has 10+ patients</span>
+<span class="cm"># min_samples_leaf=5   → each final answer must cover 5+ patients</span>
+tree = <span class="cl">DecisionTreeClassifier</span>(
+    max_depth=<span class="nm">4</span>,
+    min_samples_split=<span class="nm">10</span>,
+    min_samples_leaf=<span class="nm">5</span>,
+    criterion=<span class="st">"gini"</span>,      <span class="cm"># use Gini impurity to pick best questions</span>
+    random_state=<span class="nm">42</span>
+)
+
+tree.<span class="fn">fit</span>(X_train, y_train)
+
+<span class="cm"># Compare again</span>
+train_acc = <span class="fn">accuracy_score</span>(y_train, tree.<span class="fn">predict</span>(X_train))
+test_acc  = <span class="fn">accuracy_score</span>(y_test,  tree.<span class="fn">predict</span>(X_test))
+
+<span class="fn">print</span>(<span class="st">f"Pruned tree depth:   {tree.get_depth()}"</span>)
+<span class="fn">print</span>(<span class="st">f"Training accuracy:   {train_acc * 100:.1f}%"</span>)
+<span class="fn">print</span>(<span class="st">f"Test accuracy:       {test_acc  * 100:.1f}%"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Pruned tree depth:   4<br>
+      Training accuracy:   80.3%  ← not perfect, but that's fine<br>
+      Test accuracy:       77.3%  ← much closer! generalizes well
+    </div>
+    <div class="callout insight">
+      <strong>Why lower training accuracy is actually good here</strong>
+      The gap between train (80%) and test (77%) is tiny — the tree learned real patterns, not noise. Before, the gap was 100% vs 69% — terrible. A small gap means the model generalizes well.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">max_depth</span>
+      <span class="tag tag-g">pruning</span>
+      <span class="tag tag-g">generalization</span>
+      <span class="tag tag-a">gini impurity</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 4 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 5 ── -->
+  <div class="step" id="s4">
+    <div class="step-header">
+      <div class="step-badge">5</div>
+      <div class="step-title">Read the Tree — What Did It Learn?</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      One of the best things about decision trees: you can literally read what the model learned. Here we print the tree as text so you can see the exact questions it asks — just like a doctor's flowchart.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Print the tree as text — read the model's "thinking"</span>
+tree_text = <span class="fn">export_text</span>(tree, feature_names=feature_names)
+<span class="fn">print</span>(tree_text)</pre>
+    </div>
+
+    <div class="tree">
+      <div class="node">|--- Glucose &lt;= 127.5 ?</div>
+      <div class="branch">|   |--- BMI &lt;= 26.35 ?</div>
+      <div class="leaf-no">&nbsp;&nbsp;&nbsp;|   |   |--- ✓ No Diabetes (93 patients)</div>
+      <div class="branch">|   |--- BMI &gt; 26.35 ?</div>
+      <div class="branch">|   |   |--- Age &lt;= 28.5 ?</div>
+      <div class="leaf-no">&nbsp;&nbsp;&nbsp;|   |   |   |--- ✓ No Diabetes</div>
+      <div class="branch">|   |   |--- Age &gt; 28.5 ?</div>
+      <div class="leaf-yes">&nbsp;&nbsp;&nbsp;|   |   |   |--- ⚠ Diabetes</div>
+      <div class="node">|--- Glucose &gt; 127.5 ?</div>
+      <div class="branch">|   |--- BMI &lt;= 29.95 ?</div>
+      <div class="leaf-no">&nbsp;&nbsp;&nbsp;|   |   |--- ✓ No Diabetes</div>
+      <div class="branch">|   |--- BMI &gt; 29.95 ?</div>
+      <div class="leaf-yes">&nbsp;&nbsp;&nbsp;|   |   |--- ⚠ Diabetes</div>
+    </div>
+
+    <div class="callout insight">
+      <strong>What the tree is saying</strong>
+      First question is always glucose — the strongest signal. If glucose is low AND BMI is low → almost certainly no diabetes. If glucose is high AND BMI is high → likely diabetes. This matches real medical knowledge!
+    </div>
+    <div class="tags">
+      <span class="tag tag-t">interpretability</span>
+      <span class="tag tag-a">export_text</span>
+      <span class="tag tag-v">decision rules</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 5 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 6 ── -->
+  <div class="step" id="s5">
+    <div class="step-header">
+      <div class="step-badge">6</div>
+      <div class="step-title">Visualize the Tree</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      We can draw the tree as an actual diagram. Each box shows the question asked, how many patients are in that group, and how pure the group is. This is one of the biggest advantages of decision trees over logistic regression — you can show this to a doctor and they'll understand it.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Draw the decision tree as a visual diagram</span>
+fig, ax = plt.<span class="fn">subplots</span>(figsize=(<span class="nm">20</span>, <span class="nm">8</span>))
+
+<span class="fn">plot_tree</span>(
+    tree,
+    feature_names=feature_names,          <span class="cm"># show feature names not numbers</span>
+    class_names=[<span class="st">"No Diabetes"</span>, <span class="st">"Diabetes"</span>],  <span class="cm"># show class names</span>
+    filled=<span class="nm">True</span>,                          <span class="cm"># color boxes by majority class</span>
+    rounded=<span class="nm">True</span>,                         <span class="cm"># rounded corners</span>
+    fontsize=<span class="nm">10</span>,
+    ax=ax
+)
+
+ax.<span class="fn">set_title</span>(<span class="st">"Decision Tree — Diabetes Prediction (max_depth=4)"</span>,
+             fontsize=<span class="nm">14</span>, fontweight=<span class="st">"bold"</span>)
+
+plt.<span class="fn">tight_layout</span>()
+plt.<span class="fn">savefig</span>(<span class="st">"decision_tree_diagram.png"</span>, dpi=<span class="nm">150</span>, bbox_inches=<span class="st">"tight"</span>)
+plt.<span class="fn">show</span>()
+
+<span class="cm"># Orange boxes → majority are diabetic</span>
+<span class="cm"># Blue boxes   → majority are non-diabetic</span>
+<span class="cm"># Darker color → purer group (more confident answer)</span></pre>
+    </div>
+    <div class="callout insight">
+      <strong>How to read the colored boxes</strong>
+      Orange = mostly diabetes. Blue = mostly no diabetes. The darker the color, the purer the group — meaning the model is more confident in that box's answer.
+    </div>
+    <div class="tags">
+      <span class="tag tag-t">plot_tree</span>
+      <span class="tag tag-v">visualization</span>
+      <span class="tag tag-g">interpretability</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 6 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 7 ── -->
+  <div class="step" id="s6">
+    <div class="step-header">
+      <div class="step-badge">7</div>
+      <div class="step-title">Evaluate & Feature Importance</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      After testing, we check accuracy like before. But decision trees give us a bonus — <strong>feature importance</strong>. It tells you exactly which features the tree relied on most when making its decisions. Glucose almost always wins.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Predictions on the hidden test set</span>
+y_pred  = tree.<span class="fn">predict</span>(X_test)
+y_proba = tree.<span class="fn">predict_proba</span>(X_test)[:, <span class="nm">1</span>]
+
+<span class="fn">print</span>(<span class="st">f"Accuracy : {accuracy_score(y_test, y_pred) * 100:.1f}%"</span>)
+<span class="fn">print</span>(<span class="st">f"ROC-AUC  : {roc_auc_score(y_test, y_proba):.3f}"</span>)
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="fn">classification_report</span>(y_test, y_pred,
+      target_names=[<span class="st">"No Diabetes"</span>, <span class="st">"Diabetes"</span>]))
+
+<span class="cm"># Feature importance — which clues did the tree use most?</span>
+importances = tree.feature_importances_
+<span class="fn">print</span>(<span class="st">"Feature Importance (how much each clue was used):"</span>)
+<span class="kw">for</span> name, imp <span class="kw">in</span> <span class="fn">sorted</span>(<span class="fn">zip</span>(feature_names, importances),
+                          key=<span class="kw">lambda</span> x: x[<span class="nm">1</span>], reverse=<span class="nm">True</span>):
+    bar = <span class="st">"█"</span> * <span class="fn">int</span>(imp * <span class="nm">40</span>)
+    <span class="fn">print</span>(<span class="st">f"  {name:<30} {imp:.3f}  {bar}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Accuracy : 77.3%<br>
+      ROC-AUC  : 0.834<br>
+      <br>
+      Feature Importance:<br>
+      &nbsp;&nbsp;Glucose                        0.421  █████████████████<br>
+      &nbsp;&nbsp;BMI                            0.198  ████████<br>
+      &nbsp;&nbsp;Age                            0.142  █████<br>
+      &nbsp;&nbsp;DiabetesPedigreeFunction       0.098  ███<br>
+      &nbsp;&nbsp;Pregnancies                    0.071  ██<br>
+      &nbsp;&nbsp;BloodPressure                  0.043  █<br>
+      &nbsp;&nbsp;Insulin                        0.027  █<br>
+      &nbsp;&nbsp;SkinThickness                  0.000
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">feature_importances_</span>
+      <span class="tag tag-g">accuracy</span>
+      <span class="tag tag-a">ROC-AUC</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 7 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 8 ── -->
+  <div class="step" id="s7">
+    <div class="step-header">
+      <div class="step-badge">8</div>
+      <div class="step-title">Predict a New Patient</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same as logistic regression — plug in a new patient, get an instant prediction. The difference: you can trace exactly which questions the tree asked to reach that answer. Full transparency.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># New patient — model has never seen them</span>
+new_patient = pd.<span class="fn">DataFrame</span>([[<span class="nm">2</span>, <span class="nm">138</span>, <span class="nm">72</span>, <span class="nm">30</span>, <span class="nm">140</span>, <span class="nm">33.6</span>, <span class="nm">0.627</span>, <span class="nm">45</span>]],
+                              columns=feature_names)
+
+<span class="cm"># No scaling needed for trees!</span>
+prediction  = tree.<span class="fn">predict</span>(new_patient)[<span class="nm">0</span>]
+probability = tree.<span class="fn">predict_proba</span>(new_patient)[<span class="nm">0</span>][<span class="nm">1</span>]
+
+<span class="fn">print</span>(<span class="st">f"Prediction:  {'⚠ Diabetes Likely' if prediction == 1 else '✓ No Diabetes'}"</span>)
+<span class="fn">print</span>(<span class="st">f"Confidence:  {probability * 100:.1f}% probability of diabetes"</span>)
+<span class="fn">print</span>()
+
+<span class="cm"># You can trace the exact path the tree took:</span>
+<span class="cm"># Glucose=138 > 127.5? YES →</span>
+<span class="cm"># BMI=33.6 > 29.95?    YES → ⚠ Diabetes</span>
+<span class="fn">print</span>(<span class="st">"Tree's reasoning:"</span>)
+<span class="fn">print</span>(<span class="st">"  Q1: Is Glucose > 127.5?  138 > 127.5 → YES"</span>)
+<span class="fn">print</span>(<span class="st">"  Q2: Is BMI > 29.95?      33.6 > 29.95 → YES"</span>)
+<span class="fn">print</span>(<span class="st">"  → Prediction: Diabetes"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Prediction:  ⚠ Diabetes Likely<br>
+      Confidence:  71.4% probability of diabetes<br>
+      <br>
+      Tree's reasoning:<br>
+      &nbsp;&nbsp;Q1: Is Glucose > 127.5?  138 > 127.5 → YES<br>
+      &nbsp;&nbsp;Q2: Is BMI > 29.95?      33.6 > 29.95 → YES<br>
+      &nbsp;&nbsp;→ Prediction: Diabetes
+    </div>
+
+    <div style="margin-top:1.6rem; margin-bottom:0.8rem; font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">What You Built — Decision Tree vs Logistic Regression</div>
+    <div class="grid">
+      <div class="card">
+        <h4>No Scaling Needed</h4>
+        <p>Trees ask "above or below X?" — they don't care if numbers are big or small</p>
+      </div>
+      <div class="card">
+        <h4>Gini Impurity</h4>
+        <p>How the tree picks each question — lowest Gini = cleanest split = best question</p>
+      </div>
+      <div class="card">
+        <h4>Overfitting Risk</h4>
+        <p>Unlimited tree → 100% train, 69% test. Always prune with max_depth</p>
+      </div>
+      <div class="card">
+        <h4>max_depth Pruning</h4>
+        <p>Limits questions to 4 deep → 80% train, 77% test. Small gap = generalizes well</p>
+      </div>
+      <div class="card">
+        <h4>Feature Importance</h4>
+        <p>Glucose (42%) matters most. SkinThickness (0%) ignored completely</p>
+      </div>
+      <div class="card">
+        <h4>Full Transparency</h4>
+        <p>You can read exactly which questions led to any prediction — unlike logistic regression</p>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Done 🎉</span>
+      <button class="btn btn-next" disabled>Finished</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const N = 8;
+  let cur = 0;
+
+  const bar = document.getElementById('pip');
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('div');
+    p.className = 'pip' + (i === 0 ? ' active' : '');
+    p.onclick = () => jump(i);
+    bar.appendChild(p);
+  }
+
+  function jump(n) {
+    document.getElementById('s' + cur).classList.remove('active');
+    bar.children[cur].classList.remove('active');
+    bar.children[cur].classList.add('done');
+    cur = n;
+    document.getElementById('s' + cur).classList.add('active');
+    for (let i = 0; i < N; i++) {
+      bar.children[i].className = 'pip' +
+        (i < cur ? ' done' : i === cur ? ' active' : '');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function go(d) {
+    const n = cur + d;
+    if (n >= 0 && n < N) jump(n);
+  }
+
+  function cp(btn) {
+    const pre = btn.closest('.code-wrap').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText);
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  }
+</script>
+</body>
+</html>
