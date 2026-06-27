@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Forest – Code Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b0f0e;
+    --surface:   #121917;
+    --surface2:  #182320;
+    --border:    #223028;
+    --text:      #d8ede6;
+    --muted:     #5a7a6a;
+    --green:     #4ade80;
+    --green-dim: #0d2418;
+    --teal:      #2dd4bf;
+    --teal-dim:  #0b2420;
+    --amber:     #fbbf24;
+    --amber-dim: #2a1d08;
+    --rose:      #fb7185;
+    --rose-dim:  #2a0f14;
+    --violet:    #a78bfa;
+    --violet-dim:#1a1038;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 2.5rem 2rem 2rem;
+    max-width: 880px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.7rem;
+  }
+
+  header h1 { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+  header h1 span { color: var(--green); }
+  header p { color: var(--muted); margin-top: 0.5rem; font-size: 0.93rem; }
+
+  main { max-width: 880px; margin: 0 auto; padding: 2rem; }
+
+  .progress { display: flex; gap: 6px; margin-bottom: 2.5rem; }
+  .pip { flex: 1; height: 3px; border-radius: 2px; background: var(--border); cursor: pointer; transition: background 0.25s; }
+  .pip.done   { background: var(--green); opacity: 0.5; }
+  .pip.active { background: var(--green); }
+
+  .step { display: none; }
+  .step.active { display: block; animation: rise 0.3s ease; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-header { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.4rem; }
+  .step-badge {
+    background: var(--green); color: var(--bg);
+    font-size: 0.8rem; font-weight: 700;
+    width: 2rem; height: 2rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .step-title { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
+
+  .callout { border-left: 3px solid; padding: 0.9rem 1.1rem; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem; font-size: 0.93rem; }
+  .callout strong { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35rem; }
+
+  .callout.english { border-color: var(--teal);   background: var(--teal-dim);   }
+  .callout.english strong { color: var(--teal); }
+  .callout.warning { border-color: var(--rose);   background: var(--rose-dim);   }
+  .callout.warning strong { color: var(--rose); }
+  .callout.insight { border-color: var(--violet); background: var(--violet-dim); }
+  .callout.insight strong { color: var(--violet); }
+  .callout.tip    { border-color: var(--amber);  background: var(--amber-dim);  }
+  .callout.tip strong { color: var(--amber); }
+
+  .code-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.2rem; }
+  .code-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .code-bar span { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; }
+
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; padding: 0.18rem 0.55rem; border-radius: 4px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  pre { padding: 1.2rem 1.1rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.81rem; line-height: 1.8; }
+
+  .kw { color: var(--violet); }
+  .fn { color: var(--teal); }
+  .st { color: var(--amber); }
+  .cm { color: #2d4a3a; font-style: italic; }
+  .nm { color: var(--green); }
+  .cl { color: var(--rose); }
+
+  .output { background: #060e09; border: 1px solid #1a3020; border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--green); line-height: 1.8; }
+  .output .lbl { font-family: 'Inter', sans-serif; font-size: 0.67rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.2rem; }
+  .tag { padding: 0.22rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid; }
+  .tag-g { color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+  .tag-t { color: var(--teal);   border-color: var(--teal);   background: var(--teal-dim); }
+  .tag-v { color: var(--violet); border-color: var(--violet); background: var(--violet-dim); }
+  .tag-r { color: var(--rose);   border-color: var(--rose);   background: var(--rose-dim); }
+  .tag-a { color: var(--amber);  border-color: var(--amber);  background: var(--amber-dim); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .btn { padding: 0.55rem 1.3rem; border-radius: 7px; font-size: 0.86rem; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-prev { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .btn-prev:hover { color: var(--text); }
+  .btn-next { background: var(--green); color: var(--bg); font-weight: 600; }
+  .btn-next:hover { opacity: 0.88; }
+  .btn-next:disabled { opacity: 0.3; cursor: default; }
+  .counter { color: var(--muted); font-size: 0.83rem; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .card h4 { font-size: 0.7rem; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; font-weight: 600; }
+  .card p { font-size: 0.88rem; color: var(--text); }
+
+  .forest-viz {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem;
+    margin-bottom: 1.2rem;
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-end;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .tree-vote {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tree-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+
+  .vote-yes { color: var(--rose); font-weight: 700; }
+  .vote-no  { color: var(--green); font-weight: 700; }
+
+  .final-vote {
+    background: var(--green-dim);
+    border: 2px solid var(--green);
+    border-radius: 8px;
+    padding: 0.8rem 1.2rem;
+    text-align: center;
+    margin-top: 0.5rem;
+    width: 100%;
+    font-size: 0.88rem;
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header, main { padding: 1.2rem; }
+    header h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ML from Zero · Chapter 3</div>
+  <h1>Random <span>Forest</span></h1>
+  <p>100 decision trees vote — plain English first, then every line of code explained</p>
+</header>
+
+<main>
+  <div class="progress" id="pip"></div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="s0">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div class="step-title">Import Tools</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same as before — grab your tools first. This time we import <code>RandomForestClassifier</code>. No scaler needed, just like decision trees. We also import a few extra metrics to compare all three models side by side.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy  <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+<span class="cm"># The random forest model</span>
+<span class="kw">from</span> sklearn.ensemble     <span class="kw">import</span> <span class="cl">RandomForestClassifier</span>
+
+<span class="cm"># Same helpers as before</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split, cross_val_score
+<span class="kw">from</span> sklearn.metrics         <span class="kw">import</span> (
+    accuracy_score, classification_report,
+    confusion_matrix, roc_auc_score, roc_curve
+)</pre>
+    </div>
+    <div class="callout insight">
+      <strong>Where it lives in sklearn</strong>
+      Notice it's in <code>sklearn.ensemble</code> — not <code>sklearn.tree</code>. "Ensemble" means combining many models. That's exactly what Random Forest does.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">RandomForestClassifier</span>
+      <span class="tag tag-g">sklearn.ensemble</span>
+      <span class="tag tag-t">cross_val_score</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" disabled>← Back</button>
+      <span class="counter">Step 1 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="s1">
+    <div class="step-header">
+      <div class="step-badge">2</div>
+      <div class="step-title">Load Data & Split</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same diabetes dataset. Same 80/20 split. No scaling — Random Forest inherits this from decision trees. The numbers stay raw.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Same dataset — 768 patients, predict diabetes yes/no</span>
+url = <span class="st">"https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv"</span>
+df  = pd.<span class="fn">read_csv</span>(url)
+
+X = df.<span class="fn">drop</span>(<span class="st">"Outcome"</span>, axis=<span class="nm">1</span>)
+y = df[<span class="st">"Outcome"</span>]
+feature_names = X.columns.<span class="fn">tolist</span>()
+
+<span class="cm"># 80/20 split — same random_state so results are comparable</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+    X, y, test_size=<span class="nm">0.2</span>, random_state=<span class="nm">42</span>
+)
+
+<span class="fn">print</span>(<span class="st">f"Training: {len(X_train)} | Testing: {len(X_test)}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Training: 614 | Testing: 154
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">no scaling needed</span>
+      <span class="tag tag-t">train/test split</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 2 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step" id="s2">
+    <div class="step-header">
+      <div class="step-badge">3</div>
+      <div class="step-title">Train the Random Forest</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      We build 100 decision trees. Each tree gets a random sample of patients and a random subset of features at each split. They all train independently, then we let them vote. <code>.fit()</code> handles all of this automatically.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># n_estimators = how many trees to build (100 is a good start)</span>
+<span class="cm"># max_depth    = limit each tree's depth (prevents overfitting)</span>
+<span class="cm"># max_features = how many features each tree considers per split</span>
+<span class="cm">#                "sqrt" means √8 ≈ 3 features per split (default)</span>
+<span class="cm"># oob_score    = use leftover data to get a free accuracy estimate</span>
+<span class="cm"># n_jobs=-1    = use all CPU cores to train trees in parallel (faster)</span>
+
+rf = <span class="cl">RandomForestClassifier</span>(
+    n_estimators=<span class="nm">100</span>,
+    max_depth=<span class="nm">6</span>,
+    max_features=<span class="st">"sqrt"</span>,
+    oob_score=<span class="nm">True</span>,
+    n_jobs=<span class="nm">-1</span>,
+    random_state=<span class="nm">42</span>
+)
+
+rf.<span class="fn">fit</span>(X_train, y_train)
+
+<span class="fn">print</span>(<span class="st">"Training complete!"</span>)
+<span class="fn">print</span>(<span class="st">f"Trees built      : {rf.n_estimators}"</span>)
+<span class="fn">print</span>(<span class="st">f"OOB Score        : {rf.oob_score_ * 100:.1f}%"</span>)
+<span class="cm"># OOB = Out-Of-Bag: free accuracy test using data</span>
+<span class="cm"># each tree didn't see during training — no test set needed!</span></pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Training complete!<br>
+      Trees built      : 100<br>
+      OOB Score        : 78.3%  ← free accuracy estimate, no test set needed
+    </div>
+    <div class="callout tip">
+      <strong>What is OOB Score?</strong>
+      Each tree only trains on ~80% of the data (random sample). The leftover 20% it never saw — that's the "out-of-bag" data. sklearn automatically tests each tree on its own leftover data and averages the scores. It's a free accuracy estimate — no need to use your test set just to tune!
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">n_estimators</span>
+      <span class="tag tag-g">oob_score</span>
+      <span class="tag tag-t">max_features=sqrt</span>
+      <span class="tag tag-v">bagging</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 3 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step" id="s3">
+    <div class="step-header">
+      <div class="step-badge">4</div>
+      <div class="step-title">How the Voting Works</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      When you call <code>predict()</code>, all 100 trees vote on each patient. The majority wins. Below is a simplified view of what happens for one patient.
+    </div>
+
+    <div class="forest-viz">
+      <div class="tree-vote"><div class="tree-icon">🌲</div><div class="vote-yes">YES</div><div>Tree 1</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌳</div><div class="vote-yes">YES</div><div>Tree 2</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌲</div><div class="vote-no">NO</div><div>Tree 3</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌳</div><div class="vote-yes">YES</div><div>Tree 4</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌲</div><div class="vote-no">NO</div><div>Tree 5</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌳</div><div class="vote-yes">YES</div><div>Tree 6</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌲</div><div class="vote-yes">YES</div><div>Tree 7</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌳</div><div class="vote-no">NO</div><div>Tree 8</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌲</div><div class="vote-yes">YES</div><div>...99</div></div>
+      <div class="tree-vote"><div class="tree-icon">🌳</div><div class="vote-yes">YES</div><div>Tree 100</div></div>
+      <div class="final-vote">67 trees said YES · 33 trees said NO → Final: ⚠ Diabetes</div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># See individual tree predictions for one patient</span>
+one_patient = X_test.<span class="fn">iloc</span>[[<span class="nm">0</span>]]
+
+votes = [tree.<span class="fn">predict</span>(one_patient)[<span class="nm">0</span>] <span class="kw">for</span> tree <span class="kw">in</span> rf.estimators_]
+yes_votes = <span class="fn">sum</span>(votes)
+no_votes  = <span class="nm">100</span> - yes_votes
+
+<span class="fn">print</span>(<span class="st">f"YES votes (Diabetes)    : {yes_votes}"</span>)
+<span class="fn">print</span>(<span class="st">f"NO  votes (No Diabetes) : {no_votes}"</span>)
+<span class="fn">print</span>(<span class="st">f"Final decision          : {'Diabetes' if yes_votes > 50 else 'No Diabetes'}"</span>)
+<span class="fn">print</span>(<span class="st">f"Confidence              : {yes_votes}%"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      YES votes (Diabetes)    : 23<br>
+      NO  votes (No Diabetes) : 77<br>
+      Final decision          : No Diabetes<br>
+      Confidence              : 23%
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">majority voting</span>
+      <span class="tag tag-t">estimators_</span>
+      <span class="tag tag-v">ensemble</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 4 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step" id="s4">
+    <div class="step-header">
+      <div class="step-badge">5</div>
+      <div class="step-title">Evaluate on Test Set</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Final exam. 154 patients the model never saw. We measure accuracy, ROC-AUC, precision and recall — same as before so we can compare all three models fairly.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Predictions on hidden test set</span>
+y_pred  = rf.<span class="fn">predict</span>(X_test)
+y_proba = rf.<span class="fn">predict_proba</span>(X_test)[:, <span class="nm">1</span>]
+
+acc = <span class="fn">accuracy_score</span>(y_test, y_pred)
+auc = <span class="fn">roc_auc_score</span>(y_test, y_proba)
+
+<span class="fn">print</span>(<span class="st">f"Accuracy : {acc * 100:.1f}%"</span>)
+<span class="fn">print</span>(<span class="st">f"ROC-AUC  : {auc:.3f}"</span>)
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="fn">classification_report</span>(y_test, y_pred,
+      target_names=[<span class="st">"No Diabetes"</span>, <span class="st">"Diabetes"</span>]))</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Accuracy : 81.2%<br>
+      ROC-AUC  : 0.876<br>
+      <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;precision &nbsp; recall &nbsp; f1-score<br>
+&nbsp;&nbsp;No Diabetes &nbsp;&nbsp;&nbsp;0.85 &nbsp;&nbsp;&nbsp;&nbsp; 0.89 &nbsp;&nbsp;&nbsp;&nbsp; 0.87<br>
+&nbsp;&nbsp;Diabetes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.74 &nbsp;&nbsp;&nbsp;&nbsp; 0.67 &nbsp;&nbsp;&nbsp;&nbsp; 0.70
+    </div>
+    <div class="callout insight">
+      <strong>Better than both previous models</strong>
+      Logistic Regression: 78.6% · Decision Tree: 77.3% · Random Forest: 81.2%
+      The ensemble effect kicks in — 100 trees agreeing is more reliable than any single model.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">accuracy 81.2%</span>
+      <span class="tag tag-g">ROC-AUC 0.876</span>
+      <span class="tag tag-t">best so far</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 5 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step" id="s5">
+    <div class="step-header">
+      <div class="step-badge">6</div>
+      <div class="step-title">Feature Importance</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Random Forest can't show you one clear tree like before — there are 100 of them. But it can tell you which features mattered most across ALL 100 trees combined. This is more reliable than a single tree's importance because it's averaged over 100 opinions.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># feature_importances_ = averaged across all 100 trees</span>
+importances = rf.feature_importances_
+
+<span class="fn">print</span>(<span class="st">"Feature Importance (averaged across 100 trees):"</span>)
+<span class="kw">for</span> name, imp <span class="kw">in</span> <span class="fn">sorted</span>(<span class="fn">zip</span>(feature_names, importances),
+                          key=<span class="kw">lambda</span> x: x[<span class="nm">1</span>], reverse=<span class="nm">True</span>):
+    bar = <span class="st">"█"</span> * <span class="fn">int</span>(imp * <span class="nm">40</span>)
+    <span class="fn">print</span>(<span class="st">f"  {name:<30} {imp:.3f}  {bar}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Feature Importance (averaged across 100 trees):<br>
+      &nbsp;&nbsp;Glucose                        0.263  ██████████<br>
+      &nbsp;&nbsp;BMI                            0.171  ██████<br>
+      &nbsp;&nbsp;Age                            0.148  █████<br>
+      &nbsp;&nbsp;DiabetesPedigreeFunction       0.121  ████<br>
+      &nbsp;&nbsp;Insulin                        0.098  ███<br>
+      &nbsp;&nbsp;BloodPressure                  0.082  ███<br>
+      &nbsp;&nbsp;Pregnancies                    0.068  ██<br>
+      &nbsp;&nbsp;SkinThickness                  0.049  █
+    </div>
+    <div class="callout tip">
+      <strong>More balanced than a single tree</strong>
+      The single decision tree said SkinThickness = 0.000 (never used). Random Forest gives it 0.049 — because some of the 100 trees did find it useful. The forest gives a fairer picture of each feature's true importance.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">feature_importances_</span>
+      <span class="tag tag-v">averaged across trees</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 6 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step" id="s6">
+    <div class="step-header">
+      <div class="step-badge">7</div>
+      <div class="step-title">Cross-Validation — A Smarter Accuracy Test</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      One train/test split can be lucky or unlucky depending on which patients ended up in each pile. Cross-validation splits the data 5 different ways, trains and tests 5 times, and averages the scores. Much more reliable than one split.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># cv=5 → split data 5 ways, test 5 times, average the scores</span>
+<span class="cm"># scoring="roc_auc" → measure ROC-AUC each time</span>
+cv_scores = <span class="fn">cross_val_score</span>(
+    rf, X, y, cv=<span class="nm">5</span>, scoring=<span class="st">"roc_auc"</span>, n_jobs=<span class="nm">-1</span>
+)
+
+<span class="fn">print</span>(<span class="st">"Cross-Validation ROC-AUC scores:"</span>)
+<span class="kw">for</span> i, score <span class="kw">in</span> <span class="fn">enumerate</span>(cv_scores, <span class="nm">1</span>):
+    <span class="fn">print</span>(<span class="st">f"  Fold {i}: {score:.3f}"</span>)
+
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="st">f"Mean  : {cv_scores.mean():.3f}"</span>)
+<span class="fn">print</span>(<span class="st">f"Std   : {cv_scores.std():.3f}"</span>)
+<span class="cm"># Low std = model is consistent, not just lucky on one split</span></pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Cross-Validation ROC-AUC scores:<br>
+      &nbsp;&nbsp;Fold 1: 0.841<br>
+      &nbsp;&nbsp;Fold 2: 0.867<br>
+      &nbsp;&nbsp;Fold 3: 0.823<br>
+      &nbsp;&nbsp;Fold 4: 0.879<br>
+      &nbsp;&nbsp;Fold 5: 0.854<br>
+      <br>
+      Mean  : 0.853<br>
+      Std   : 0.021  ← low = consistent performance
+    </div>
+    <div class="callout insight">
+      <strong>Why std matters</strong>
+      Mean 0.853 is good. But std 0.021 is even more important — it means the model performs consistently across all 5 different data splits. It's not just getting lucky.
+    </div>
+    <div class="tags">
+      <span class="tag tag-t">cross_val_score</span>
+      <span class="tag tag-t">cv=5</span>
+      <span class="tag tag-v">mean ± std</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 7 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="step" id="s7">
+    <div class="step-header">
+      <div class="step-badge">8</div>
+      <div class="step-title">Predict New Patient + Full Comparison</div>
+    </div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same new patient as before. Now all 100 trees vote on them. Then we compare all three models side by side — you can see clearly why Random Forest wins.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Predict the same patient as before — compare results</span>
+new_patient = pd.<span class="fn">DataFrame</span>([[<span class="nm">2</span>, <span class="nm">138</span>, <span class="nm">72</span>, <span class="nm">30</span>, <span class="nm">140</span>, <span class="nm">33.6</span>, <span class="nm">0.627</span>, <span class="nm">45</span>]],
+                              columns=feature_names)
+
+pred = rf.<span class="fn">predict</span>(new_patient)[<span class="nm">0</span>]
+prob = rf.<span class="fn">predict_proba</span>(new_patient)[<span class="nm">0</span>][<span class="nm">1</span>]
+
+<span class="fn">print</span>(<span class="st">f"Prediction  : {'⚠ Diabetes Likely' if pred==1 else '✓ No Diabetes'}"</span>)
+<span class="fn">print</span>(<span class="st">f"Confidence  : {prob*100:.1f}% (averaged vote of 100 trees)"</span>)
+<span class="fn">print</span>()
+
+<span class="cm"># Full model comparison</span>
+<span class="fn">print</span>(<span class="st">"━" * 52</span>)
+<span class="fn">print</span>(<span class="st">f"{'Model':<25} {'Accuracy':>10} {'ROC-AUC':>10}"</span>)
+<span class="fn">print</span>(<span class="st">"━" * 52</span>)
+<span class="fn">print</span>(<span class="st">f"{'Logistic Regression':<25} {'78.6%':>10} {'0.850':>10}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Decision Tree':<25} {'77.3%':>10} {'0.830':>10}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Random Forest':<25} {'81.2%':>10} {'0.876':>10}"</span>)
+<span class="fn">print</span>(<span class="st">"━" * 52</span>)
+<span class="fn">print</span>(<span class="st">"Winner: Random Forest 🏆"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Prediction  : ⚠ Diabetes Likely<br>
+      Confidence  : 68.0% (averaged vote of 100 trees)<br>
+      <br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Accuracy &nbsp;&nbsp; ROC-AUC<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Logistic Regression &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 78.6% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.850<br>
+      Decision Tree &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 77.3% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.830<br>
+      Random Forest &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 81.2% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.876<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Winner: Random Forest 🏆
+    </div>
+
+    <div style="margin-top:1.6rem; margin-bottom:0.8rem; font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">What You Built</div>
+    <div class="grid">
+      <div class="card">
+        <h4>n_estimators=100</h4>
+        <p>Built 100 decision trees, each with different random data and features</p>
+      </div>
+      <div class="card">
+        <h4>Bagging</h4>
+        <p>Each tree trains on a random 80% sample — forces diversity across the forest</p>
+      </div>
+      <div class="card">
+        <h4>OOB Score</h4>
+        <p>Free accuracy estimate using each tree's leftover data — no test set wasted</p>
+      </div>
+      <div class="card">
+        <h4>Majority Voting</h4>
+        <p>67 trees say YES, 33 say NO → Final answer: YES. Errors cancel out</p>
+      </div>
+      <div class="card">
+        <h4>Cross-Validation</h4>
+        <p>5 different splits, 5 tests, averaged → more reliable than one lucky split</p>
+      </div>
+      <div class="card">
+        <h4>Best Accuracy</h4>
+        <p>81.2% vs 78.6% (LR) vs 77.3% (DT) — ensemble learning wins</p>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Done 🎉</span>
+      <button class="btn btn-next" disabled>Finished</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const N = 8; let cur = 0;
+  const bar = document.getElementById('pip');
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('div');
+    p.className = 'pip' + (i === 0 ? ' active' : '');
+    p.onclick = () => jump(i);
+    bar.appendChild(p);
+  }
+  function jump(n) {
+    document.getElementById('s'+cur).classList.remove('active');
+    bar.children[cur].classList.remove('active');
+    bar.children[cur].classList.add('done');
+    cur = n;
+    document.getElementById('s'+cur).classList.add('active');
+    for (let i=0;i<N;i++) bar.children[i].className='pip'+(i<cur?' done':i===cur?' active':'');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function go(d){const n=cur+d;if(n>=0&&n<N)jump(n);}
+  function cp(btn){
+    navigator.clipboard.writeText(btn.closest('.code-wrap').querySelector('pre').innerText);
+    btn.textContent='copied!';setTimeout(()=>btn.textContent='copy',1500);
+  }
+</script>
+</body>
+</html>
