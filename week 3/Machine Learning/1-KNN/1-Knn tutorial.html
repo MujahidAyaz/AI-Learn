@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KNN – Code Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #0c0b14;
+    --surface:    #13121e;
+    --surface2:   #1a1928;
+    --border:     #252340;
+    --text:       #e0dcf5;
+    --muted:      #6b6890;
+    --blue:       #60a5fa;
+    --blue-dim:   #0d1a33;
+    --violet:     #a78bfa;
+    --violet-dim: #1a1038;
+    --cyan:       #22d3ee;
+    --cyan-dim:   #0a2530;
+    --rose:       #fb7185;
+    --rose-dim:   #2a0f14;
+    --amber:      #fbbf24;
+    --amber-dim:  #2a1d08;
+    --green:      #4ade80;
+    --green-dim:  #0d2419;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; line-height: 1.75; min-height: 100vh; }
+
+  header { padding: 2.5rem 2rem 2rem; max-width: 880px; margin: 0 auto; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--blue); margin-bottom: 0.7rem; }
+  header h1 { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+  header h1 span { color: var(--blue); }
+  header p { color: var(--muted); margin-top: 0.5rem; font-size: 0.93rem; }
+
+  main { max-width: 880px; margin: 0 auto; padding: 2rem; }
+
+  .progress { display: flex; gap: 6px; margin-bottom: 2.5rem; }
+  .pip { flex: 1; height: 3px; border-radius: 2px; background: var(--border); cursor: pointer; transition: background 0.25s; }
+  .pip.done { background: var(--blue); opacity: 0.5; }
+  .pip.active { background: var(--blue); }
+
+  .step { display: none; }
+  .step.active { display: block; animation: rise 0.3s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .step-header { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.4rem; }
+  .step-badge { background: var(--blue); color: var(--bg); font-size: 0.8rem; font-weight: 700; width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-title { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
+
+  .callout { border-left: 3px solid; padding: 0.9rem 1.1rem; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem; font-size: 0.93rem; }
+  .callout strong { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35rem; }
+  .callout.english { border-color: var(--cyan);   background: var(--cyan-dim);   } .callout.english strong { color: var(--cyan); }
+  .callout.warning { border-color: var(--rose);   background: var(--rose-dim);   } .callout.warning strong { color: var(--rose); }
+  .callout.insight { border-color: var(--violet); background: var(--violet-dim); } .callout.insight strong { color: var(--violet); }
+  .callout.tip     { border-color: var(--amber);  background: var(--amber-dim);  } .callout.tip strong { color: var(--amber); }
+
+  .code-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.2rem; }
+  .code-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .code-bar span { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; }
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; padding: 0.18rem 0.55rem; border-radius: 4px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  pre { padding: 1.2rem 1.1rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.81rem; line-height: 1.8; }
+  .kw { color: var(--violet); } .fn { color: var(--cyan); } .st { color: var(--amber); }
+  .cm { color: #2d3a5a; font-style: italic; } .nm { color: var(--blue); } .cl { color: var(--rose); }
+
+  .output { background: #06080f; border: 1px solid #1a2040; border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--blue); line-height: 1.8; }
+  .output .lbl { font-family: 'Inter', sans-serif; font-size: 0.67rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.2rem; }
+  .tag { padding: 0.22rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid; }
+  .tag-b { color: var(--blue);   border-color: var(--blue);   background: var(--blue-dim); }
+  .tag-c { color: var(--cyan);   border-color: var(--cyan);   background: var(--cyan-dim); }
+  .tag-v { color: var(--violet); border-color: var(--violet); background: var(--violet-dim); }
+  .tag-r { color: var(--rose);   border-color: var(--rose);   background: var(--rose-dim); }
+  .tag-a { color: var(--amber);  border-color: var(--amber);  background: var(--amber-dim); }
+  .tag-g { color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .btn { padding: 0.55rem 1.3rem; border-radius: 7px; font-size: 0.86rem; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-prev { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .btn-prev:hover { color: var(--text); }
+  .btn-next { background: var(--blue); color: var(--bg); font-weight: 600; }
+  .btn-next:hover { opacity: 0.88; }
+  .btn-next:disabled { opacity: 0.3; cursor: default; }
+  .counter { color: var(--muted); font-size: 0.83rem; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .card h4 { font-size: 0.7rem; color: var(--blue); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; font-weight: 600; }
+  .card p { font-size: 0.88rem; color: var(--text); }
+
+  /* KNN visualizer */
+  .knn-viz {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem;
+    margin-bottom: 1.2rem;
+    text-align: center;
+  }
+
+  .knn-viz canvas { border-radius: 8px; max-width: 100%; }
+
+  .k-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .k-slider-wrap label { font-size: 0.85rem; color: var(--muted); }
+  .k-slider-wrap input[type=range] { accent-color: var(--blue); width: 160px; }
+  .k-val { font-family: 'JetBrains Mono', monospace; color: var(--blue); font-weight: 600; font-size: 0.9rem; min-width: 2rem; }
+  .k-result { font-size: 0.88rem; margin-top: 0.7rem; font-weight: 500; }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header, main { padding: 1.2rem; }
+    header h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ML from Zero · Chapter 4</div>
+  <h1>K-Nearest <span>Neighbors</span></h1>
+  <p>Find the most similar patients and copy their answer — plain English first, then every line of code explained</p>
+</header>
+
+<main>
+  <div class="progress" id="pip"></div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="s0">
+    <div class="step-header"><div class="step-badge">1</div><div class="step-title">Import Tools</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same setup as before. This time we import <code>KNeighborsClassifier</code> and also bring back <code>StandardScaler</code> — unlike trees, KNN absolutely needs scaling. We also import tools to find the best value of K automatically.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy  <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+<span class="cm"># The KNN model</span>
+<span class="kw">from</span> sklearn.neighbors       <span class="kw">import</span> <span class="cl">KNeighborsClassifier</span>
+
+<span class="cm"># Scaler — CRITICAL for KNN (distance-based algorithm)</span>
+<span class="kw">from</span> sklearn.preprocessing   <span class="kw">import</span> StandardScaler
+
+<span class="cm"># Same helpers as before</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split, cross_val_score
+<span class="kw">from</span> sklearn.metrics         <span class="kw">import</span> (
+    accuracy_score, classification_report,
+    confusion_matrix, roc_auc_score, roc_curve
+)</pre>
+    </div>
+    <div class="callout warning">
+      <strong>Scaling is NOT optional for KNN</strong>
+      Every other tree-based model skipped scaling. KNN measures distances between patients — if Glucose goes 0–200 and Age goes 20–80, Glucose will dominate every distance calculation just because its numbers are bigger. Always scale before KNN.
+    </div>
+    <div class="tags">
+      <span class="tag tag-b">KNeighborsClassifier</span>
+      <span class="tag tag-r">StandardScaler (required!)</span>
+      <span class="tag tag-c">sklearn.neighbors</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" disabled>← Back</button>
+      <span class="counter">Step 1 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="s1">
+    <div class="step-header"><div class="step-badge">2</div><div class="step-title">Load Data, Split & Scale</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same dataset, same 80/20 split. But this time we add scaling back — fit the scaler on training data only, then apply the same scale to test data. Exact same rule as logistic regression.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Load the diabetes dataset</span>
+url = <span class="st">"https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv"</span>
+df  = pd.<span class="fn">read_csv</span>(url)
+
+X = df.<span class="fn">drop</span>(<span class="st">"Outcome"</span>, axis=<span class="nm">1</span>)
+y = df[<span class="st">"Outcome"</span>]
+feature_names = X.columns.<span class="fn">tolist</span>()
+
+<span class="cm"># 80/20 split</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+    X, y, test_size=<span class="nm">0.2</span>, random_state=<span class="nm">42</span>
+)
+
+<span class="cm"># Scale — REQUIRED for KNN</span>
+<span class="cm"># fit on training only, apply same scale to test</span>
+scaler = <span class="fn">StandardScaler</span>()
+X_train_scaled = scaler.<span class="fn">fit_transform</span>(X_train)
+X_test_scaled  = scaler.<span class="fn">transform</span>(X_test)
+
+<span class="fn">print</span>(<span class="st">f"Training: {len(X_train)} | Testing: {len(X_test)}"</span>)
+<span class="fn">print</span>(<span class="st">"Features scaled — ready for distance calculations"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Training: 614 | Testing: 154<br>
+      Features scaled — ready for distance calculations
+    </div>
+    <div class="tags">
+      <span class="tag tag-r">StandardScaler (fit on train only)</span>
+      <span class="tag tag-c">train/test split</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 2 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step" id="s2">
+    <div class="step-header"><div class="step-badge">3</div><div class="step-title">Find the Best K</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      K is how many neighbors to look at. K=1 is too sensitive (overfitting). K too large ignores local patterns (underfitting). We test every K from 1 to 30 and see which scores best. This is called a parameter search.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Test every K from 1 to 30</span>
+<span class="cm"># For each K: train a model, measure cross-val accuracy, store it</span>
+k_values   = <span class="fn">range</span>(<span class="nm">1</span>, <span class="nm">31</span>)
+cv_scores  = []
+
+<span class="kw">for</span> k <span class="kw">in</span> k_values:
+    knn   = <span class="cl">KNeighborsClassifier</span>(n_neighbors=k)
+    score = <span class="fn">cross_val_score</span>(
+        knn, X_train_scaled, y_train,
+        cv=<span class="nm">5</span>, scoring=<span class="st">"roc_auc"</span>
+    ).<span class="fn">mean</span>()
+    cv_scores.<span class="fn">append</span>(score)
+
+<span class="cm"># Find which K gave the best score</span>
+best_k     = k_values[<span class="fn">int</span>(np.<span class="fn">argmax</span>(cv_scores))]
+best_score = <span class="fn">max</span>(cv_scores)
+
+<span class="fn">print</span>(<span class="st">f"Best K     : {best_k}"</span>)
+<span class="fn">print</span>(<span class="st">f"Best Score : {best_score:.3f} ROC-AUC"</span>)
+
+<span class="cm"># Plot K vs accuracy to see the sweet spot</span>
+plt.<span class="fn">figure</span>(figsize=(<span class="nm">10</span>, <span class="nm">4</span>))
+plt.<span class="fn">plot</span>(k_values, cv_scores, color=<span class="st">"#60a5fa"</span>, lw=<span class="nm">2</span>, marker=<span class="st">"o"</span>, markersize=<span class="nm">4</span>)
+plt.<span class="fn">axvline</span>(best_k, color=<span class="st">"#fb7185"</span>, linestyle=<span class="st">"--"</span>, label=<span class="st">f"Best K={best_k}"</span>)
+plt.<span class="fn">xlabel</span>(<span class="st">"K (number of neighbors)"</span>)
+plt.<span class="fn">ylabel</span>(<span class="st">"Cross-Val ROC-AUC"</span>)
+plt.<span class="fn">title</span>(<span class="st">"Finding the Best K"</span>)
+plt.<span class="fn">legend</span>()
+plt.<span class="fn">tight_layout</span>()
+plt.<span class="fn">savefig</span>(<span class="st">"knn_best_k.png"</span>, dpi=<span class="nm">150</span>)
+plt.<span class="fn">show</span>()</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Best K     : 11<br>
+      Best Score : 0.847 ROC-AUC
+    </div>
+    <div class="callout insight">
+      <strong>Why K=11 and not K=1?</strong>
+      K=1 gets 100% on training (memorizes every patient) but fails on new ones. As K grows, accuracy rises then falls. K=11 is the sweet spot — enough neighbors to vote reliably, not so many it becomes too broad.
+    </div>
+    <div class="tags">
+      <span class="tag tag-b">n_neighbors</span>
+      <span class="tag tag-v">parameter search</span>
+      <span class="tag tag-c">cross_val_score</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 3 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 — Interactive visualizer -->
+  <div class="step" id="s3">
+    <div class="step-header"><div class="step-badge">4</div><div class="step-title">See KNN Working — Interactive</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Move the slider to change K. Watch how the new patient (⭐) gets classified based on its nearest neighbors. Blue dots = No Diabetes. Red dots = Diabetes. The circle shows which neighbors are being counted.
+    </div>
+
+    <div class="knn-viz">
+      <canvas id="knnCanvas" width="500" height="320"></canvas>
+      <div class="k-slider-wrap">
+        <label>K =</label>
+        <span class="k-val" id="kDisp">5</span>
+        <input type="range" min="1" max="15" value="5" id="kSlider">
+        <div class="k-result" id="kResult"></div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <strong>Notice what happens</strong>
+      At K=1 the star copies its single nearest neighbor — unstable. At K=3 it takes a small vote. At K=11+ the circle widens and more patients get a say — more stable answer.
+    </div>
+    <div class="tags">
+      <span class="tag tag-b">K=1 → overfitting</span>
+      <span class="tag tag-b">K=11 → sweet spot</span>
+      <span class="tag tag-b">K=30 → underfitting</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 4 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step" id="s4">
+    <div class="step-header"><div class="step-badge">5</div><div class="step-title">Train the Final Model</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Now we know K=11 is best. We train the final model with that K. Remember — "training" for KNN just means storing the data. There is no actual learning happening. The work happens at prediction time when it searches for neighbors.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Train final model with best K</span>
+<span class="cm"># metric="euclidean" → straight-line distance between patients</span>
+<span class="cm"># weights="uniform"  → all K neighbors get equal vote</span>
+<span class="cm"># weights="distance" → closer neighbors get more vote weight</span>
+knn = <span class="cl">KNeighborsClassifier</span>(
+    n_neighbors=best_k,
+    metric=<span class="st">"euclidean"</span>,
+    weights=<span class="st">"uniform"</span>
+)
+
+<span class="cm"># "Training" = just storing the scaled data in memory</span>
+<span class="cm"># No weights learned, no trees built — just memorization</span>
+knn.<span class="fn">fit</span>(X_train_scaled, y_train)
+
+<span class="fn">print</span>(<span class="st">f"Model ready — K={knn.n_neighbors} neighbors"</span>)
+<span class="fn">print</span>(<span class="st">f"Distance metric : {knn.metric}"</span>)
+<span class="fn">print</span>(<span class="st">f"Stored patients : {knn.n_samples_fit_}"</span>)
+<span class="fn">print</span>(<span class="st">"(KNN just memorized all 614 training patients)"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Model ready — K=11 neighbors<br>
+      Distance metric : euclidean<br>
+      Stored patients : 614<br>
+      (KNN just memorized all 614 training patients)
+    </div>
+    <div class="tags">
+      <span class="tag tag-b">n_neighbors=11</span>
+      <span class="tag tag-c">euclidean distance</span>
+      <span class="tag tag-v">lazy learner</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 5 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step" id="s5">
+    <div class="step-header"><div class="step-badge">6</div><div class="step-title">How a Single Prediction Works</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      When you call predict() on a new patient, KNN searches all 614 stored patients, calculates the distance to each one, picks the 11 closest, and takes a majority vote. Let's see this in action step by step.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># New patient — same one as before</span>
+new_patient = pd.<span class="fn">DataFrame</span>(
+    [[<span class="nm">2</span>, <span class="nm">138</span>, <span class="nm">72</span>, <span class="nm">30</span>, <span class="nm">140</span>, <span class="nm">33.6</span>, <span class="nm">0.627</span>, <span class="nm">45</span>]],
+    columns=feature_names
+)
+new_scaled = scaler.<span class="fn">transform</span>(new_patient)
+
+<span class="cm"># Find the 11 nearest neighbors</span>
+distances, indices = knn.<span class="fn">kneighbors</span>(new_scaled)
+
+<span class="fn">print</span>(<span class="st">f"The {best_k} nearest neighbors:"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Neighbor':<10} {'Distance':>10} {'Has Diabetes?':>15}"</span>)
+<span class="fn">print</span>(<span class="st">"─"</span> * <span class="nm">38</span>)
+<span class="kw">for</span> rank, (dist, idx) <span class="kw">in</span> <span class="fn">enumerate</span>(
+        <span class="fn">zip</span>(distances[<span class="nm">0</span>], indices[<span class="nm">0</span>]), <span class="nm">1</span>):
+    label = <span class="st">"YES ⚠"</span> <span class="kw">if</span> y_train.<span class="fn">iloc</span>[idx] == <span class="nm">1</span> <span class="kw">else</span> <span class="st">"no ✓"</span>
+    <span class="fn">print</span>(<span class="st">f"#{rank:<9} {dist:>10.3f} {label:>15}"</span>)
+
+<span class="cm"># Final vote</span>
+neighbor_labels = y_train.<span class="fn">iloc</span>[indices[<span class="nm">0</span>]]
+yes_votes = neighbor_labels.<span class="fn">sum</span>()
+no_votes  = best_k - yes_votes
+<span class="fn">print</span>(<span class="st">f"\nVote: {yes_votes} YES vs {no_votes} NO"</span>)
+<span class="fn">print</span>(<span class="st">f"Prediction: {'Diabetes' if yes_votes > no_votes else 'No Diabetes'}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      The 11 nearest neighbors:<br>
+      Neighbor &nbsp;&nbsp; Distance &nbsp;&nbsp; Has Diabetes?<br>
+      ──────────────────────────────────────<br>
+      #1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; 0.812 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; YES ⚠<br>
+      #2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; 0.934 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; no ✓<br>
+      #3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; 1.021 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; YES ⚠<br>
+      #4 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; 1.103 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; YES ⚠<br>
+      #5 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; 1.187 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; no ✓<br>
+      ...<br>
+      <br>
+      Vote: 7 YES vs 4 NO<br>
+      Prediction: Diabetes
+    </div>
+    <div class="tags">
+      <span class="tag tag-b">kneighbors()</span>
+      <span class="tag tag-c">distances</span>
+      <span class="tag tag-v">majority vote</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 6 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step" id="s6">
+    <div class="step-header"><div class="step-badge">7</div><div class="step-title">Evaluate on Test Set</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Final exam. Same 154 hidden patients. Same metrics as all previous models so we can compare fairly.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Predict on hidden test set</span>
+y_pred  = knn.<span class="fn">predict</span>(X_test_scaled)
+y_proba = knn.<span class="fn">predict_proba</span>(X_test_scaled)[:, <span class="nm">1</span>]
+
+acc = <span class="fn">accuracy_score</span>(y_test, y_pred)
+auc = <span class="fn">roc_auc_score</span>(y_test, y_proba)
+
+<span class="fn">print</span>(<span class="st">f"Accuracy : {acc * 100:.1f}%"</span>)
+<span class="fn">print</span>(<span class="st">f"ROC-AUC  : {auc:.3f}"</span>)
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="fn">classification_report</span>(y_test, y_pred,
+      target_names=[<span class="st">"No Diabetes"</span>, <span class="st">"Diabetes"</span>]))</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Accuracy : 77.9%<br>
+      ROC-AUC  : 0.841<br>
+      <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;precision &nbsp; recall &nbsp; f1-score<br>
+&nbsp;&nbsp;No Diabetes &nbsp;&nbsp;&nbsp;0.82 &nbsp;&nbsp;&nbsp;&nbsp; 0.87 &nbsp;&nbsp;&nbsp;&nbsp; 0.84<br>
+&nbsp;&nbsp;Diabetes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.70 &nbsp;&nbsp;&nbsp;&nbsp; 0.62 &nbsp;&nbsp;&nbsp;&nbsp; 0.66
+    </div>
+    <div class="callout insight">
+      <strong>Where KNN lands in the comparison</strong>
+      Solid performance — beats Decision Tree, close to Logistic Regression, but Random Forest still leads. KNN shines on smaller, well-scaled datasets where similarity between points is meaningful.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">accuracy 77.9%</span>
+      <span class="tag tag-g">ROC-AUC 0.841</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 7 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="step" id="s7">
+    <div class="step-header"><div class="step-badge">8</div><div class="step-title">Full Model Comparison</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      All four models, same dataset, same split — honest comparison. You've now built every single one of these from scratch.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Final comparison of all 4 models</span>
+results = [
+    (<span class="st">"Logistic Regression"</span>, <span class="nm">78.6</span>, <span class="nm">0.850</span>, <span class="st">"Yes"</span>,  <span class="st">"No"</span>),
+    (<span class="st">"Decision Tree"</span>,       <span class="nm">77.3</span>, <span class="nm">0.830</span>, <span class="st">"No"</span>,   <span class="st">"Yes"</span>),
+    (<span class="st">"Random Forest"</span>,       <span class="nm">81.2</span>, <span class="nm">0.876</span>, <span class="st">"No"</span>,   <span class="st">"Yes"</span>),
+    (<span class="st">"KNN (K=11)"</span>,          <span class="nm">77.9</span>, <span class="nm">0.841</span>, <span class="st">"Yes"</span>,  <span class="st">"No"</span>),
+]
+
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">65</span>)
+<span class="fn">print</span>(<span class="st">f"{'Model':<22}{'Acc':>8}{'AUC':>8}{'Scaling':>10}{'Training':>12}"</span>)
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">65</span>)
+<span class="kw">for</span> name, acc, auc, scaling, training <span class="kw">in</span> results:
+    <span class="fn">print</span>(<span class="st">f"{name:<22}{acc:>7.1f}%{auc:>8.3f}{scaling:>10}{training:>12}"</span>)
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">65</span>)
+<span class="fn">print</span>(<span class="st">"Best accuracy : Random Forest (81.2%) 🏆"</span>)
+<span class="fn">print</span>(<span class="st">"Most explainable: Decision Tree"</span>)
+<span class="fn">print</span>(<span class="st">"Simplest concept: KNN"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Acc &nbsp;&nbsp;&nbsp;&nbsp; AUC &nbsp;&nbsp; Scaling &nbsp;&nbsp; Training<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Logistic Regression &nbsp;&nbsp; 78.6% &nbsp;&nbsp; 0.850 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; No<br>
+      Decision Tree &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 77.3% &nbsp;&nbsp; 0.830 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; No &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      Random Forest &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 81.2% &nbsp;&nbsp; 0.876 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; No &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      KNN (K=11) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 77.9% &nbsp;&nbsp; 0.841 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; No<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Best accuracy    : Random Forest (81.2%) 🏆<br>
+      Most explainable : Decision Tree<br>
+      Simplest concept : KNN
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">4 models compared</span>
+      <span class="tag tag-b">same dataset</span>
+      <span class="tag tag-b">same split</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 8 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 9 -->
+  <div class="step" id="s8">
+    <div class="step-header"><div class="step-badge">9</div><div class="step-title">Visualizations</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Three charts: ROC curve, the K vs accuracy search so you can see the sweet spot, and the confusion matrix. Plus we save everything for GitHub.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Rebuild cv_scores if needed (from Step 3)</span>
+k_values  = <span class="fn">range</span>(<span class="nm">1</span>, <span class="nm">31</span>)
+cv_scores = [
+    <span class="fn">cross_val_score</span>(<span class="cl">KNeighborsClassifier</span>(n_neighbors=k),
+                    X_train_scaled, y_train,
+                    cv=<span class="nm">5</span>, scoring=<span class="st">"roc_auc"</span>).<span class="fn">mean</span>()
+    <span class="kw">for</span> k <span class="kw">in</span> k_values
+]
+
+cm  = <span class="fn">confusion_matrix</span>(y_test, y_pred)
+fpr, tpr, _ = <span class="fn">roc_curve</span>(y_test, y_proba)
+
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nm">1</span>, <span class="nm">3</span>, figsize=(<span class="nm">16</span>, <span class="nm">5</span>))
+fig.<span class="fn">suptitle</span>(<span class="st">"KNN — Diabetes Prediction"</span>, fontsize=<span class="nm">14</span>, fontweight=<span class="st">"bold"</span>)
+
+<span class="cm"># Chart 1: ROC Curve</span>
+axes[<span class="nm">0</span>].<span class="fn">plot</span>(fpr, tpr, color=<span class="st">"#60a5fa"</span>, lw=<span class="nm">2</span>, label=<span class="st">f"AUC={auc:.2f}"</span>)
+axes[<span class="nm">0</span>].<span class="fn">plot</span>([<span class="nm">0</span>,<span class="nm">1</span>],[<span class="nm">0</span>,<span class="nm">1</span>],<span class="st">"--"</span>,color=<span class="st">"#555"</span>)
+axes[<span class="nm">0</span>].<span class="fn">set_title</span>(<span class="st">"ROC Curve"</span>); axes[<span class="nm">0</span>].<span class="fn">legend</span>()
+
+<span class="cm"># Chart 2: K vs Accuracy — the sweet spot</span>
+axes[<span class="nm">1</span>].<span class="fn">plot</span>(k_values, cv_scores, color=<span class="st">"#60a5fa"</span>, lw=<span class="nm">2</span>, marker=<span class="st">"o"</span>, ms=<span class="nm">4</span>)
+axes[<span class="nm">1</span>].<span class="fn">axvline</span>(best_k, color=<span class="st">"#fb7185"</span>, linestyle=<span class="st">"--"</span>,
+               label=<span class="st">f"Best K={best_k}"</span>)
+axes[<span class="nm">1</span>].<span class="fn">set_title</span>(<span class="st">"K vs ROC-AUC\n(finding the sweet spot)"</span>)
+axes[<span class="nm">1</span>].<span class="fn">set_xlabel</span>(<span class="st">"K"</span>); axes[<span class="nm">1</span>].<span class="fn">legend</span>()
+
+<span class="cm"># Chart 3: Confusion Matrix</span>
+axes[<span class="nm">2</span>].<span class="fn">imshow</span>(cm, cmap=<span class="st">"Blues"</span>)
+axes[<span class="nm">2</span>].<span class="fn">set_xticks</span>([<span class="nm">0</span>,<span class="nm">1</span>]); axes[<span class="nm">2</span>].<span class="fn">set_yticks</span>([<span class="nm">0</span>,<span class="nm">1</span>])
+axes[<span class="nm">2</span>].<span class="fn">set_xticklabels</span>([<span class="st">"Pred: No"</span>,<span class="st">"Pred: Yes"</span>])
+axes[<span class="nm">2</span>].<span class="fn">set_yticklabels</span>([<span class="st">"Actual: No"</span>,<span class="st">"Actual: Yes"</span>])
+axes[<span class="nm">2</span>].<span class="fn">set_title</span>(<span class="st">"Confusion Matrix"</span>)
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">2</span>):
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">2</span>):
+        axes[<span class="nm">2</span>].<span class="fn">text</span>(j, i, <span class="fn">str</span>(cm[i,j]), ha=<span class="st">"center"</span>, va=<span class="st">"center"</span>,
+                     fontsize=<span class="nm">18</span>, fontweight=<span class="st">"bold"</span>,
+                     color=<span class="st">"white"</span> <span class="kw">if</span> cm[i,j] > cm.<span class="fn">max</span>()/<span class="nm">2</span> <span class="kw">else</span> <span class="st">"black"</span>)
+
+plt.<span class="fn">tight_layout</span>()
+plt.<span class="fn">savefig</span>(<span class="st">"knn_results.png"</span>, dpi=<span class="nm">150</span>, bbox_inches=<span class="st">"tight"</span>)
+plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <div style="margin-top:1.6rem; margin-bottom:0.8rem; font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">What You Built</div>
+    <div class="grid">
+      <div class="card"><h4>Scaling (Critical)</h4><p>KNN measures distances — without scaling, big-number features dominate unfairly</p></div>
+      <div class="card"><h4>Finding Best K</h4><p>Tested K=1 to 30, picked K=11 — the sweet spot between overfitting and underfitting</p></div>
+      <div class="card"><h4>kneighbors()</h4><p>Traced the exact 11 neighbors found for a new patient — full transparency on each prediction</p></div>
+      <div class="card"><h4>No Training Phase</h4><p>KNN just memorizes data — all the work happens at prediction time when it searches neighbors</p></div>
+      <div class="card"><h4>Majority Voting</h4><p>7 YES vs 4 NO among 11 neighbors → Diabetes. Same voting idea as Random Forest</p></div>
+      <div class="card"><h4>Full Comparison</h4><p>4 models, same data — Random Forest still wins but KNN beats Decision Tree</p></div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Done 🎉</span>
+      <button class="btn btn-next" disabled>Finished</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const N = 9; let cur = 0;
+  const bar = document.getElementById('pip');
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('div');
+    p.className = 'pip' + (i === 0 ? ' active' : '');
+    p.onclick = () => jump(i);
+    bar.appendChild(p);
+  }
+  function jump(n) {
+    document.getElementById('s'+cur).classList.remove('active');
+    bar.children[cur].classList.remove('active');
+    bar.children[cur].classList.add('done');
+    cur = n;
+    document.getElementById('s'+cur).classList.add('active');
+    for (let i=0;i<N;i++) bar.children[i].className='pip'+(i<cur?' done':i===cur?' active':'');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function go(d){const n=cur+d;if(n>=0&&n<N)jump(n);}
+  function cp(btn){
+    navigator.clipboard.writeText(btn.closest('.code-wrap').querySelector('pre').innerText);
+    btn.textContent='copied!';setTimeout(()=>btn.textContent='copy',1500);
+  }
+
+  // ── KNN Canvas Visualizer ──
+  const canvas = document.getElementById('knnCanvas');
+  const ctx    = canvas.getContext('2d');
+  const slider = document.getElementById('kSlider');
+  const kDisp  = document.getElementById('kDisp');
+  const kRes   = document.getElementById('kResult');
+
+  // Generate fake patient data (glucose vs bmi scaled)
+  const rng = (seed) => { let s=seed; return ()=>{ s=Math.sin(s)*10000; return s-Math.floor(s); }; };
+  const rand = rng(42);
+  const pts  = [];
+  for (let i=0;i<60;i++) {
+    pts.push({
+      x: 60 + rand()*380,
+      y: 30 + rand()*260,
+      c: rand() > 0.55 ? 0 : 1  // 0=no diabetes, 1=diabetes
+    });
+  }
+  const star = { x: 250, y: 160 };
+
+  function dist(a,b){ return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2); }
+
+  function drawKNN(k) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Background
+    ctx.fillStyle = '#13121e';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Find K nearest
+    const sorted = [...pts].sort((a,b)=>dist(a,star)-dist(b,star));
+    const neighbors = sorted.slice(0,k);
+    const radius = dist(neighbors[neighbors.length-1], star) + 5;
+
+    // Draw radius circle
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, radius, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(96,165,250,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6,4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw lines to neighbors
+    neighbors.forEach(p => {
+      ctx.beginPath();
+      ctx.moveTo(star.x, star.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = p.c===1 ? 'rgba(251,113,133,0.4)' : 'rgba(96,165,250,0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // Draw all points
+    pts.forEach(p => {
+      const isNeighbor = neighbors.includes(p);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, isNeighbor ? 7 : 5, 0, Math.PI*2);
+      ctx.fillStyle = p.c===1
+        ? (isNeighbor ? '#fb7185' : 'rgba(251,113,133,0.35)')
+        : (isNeighbor ? '#60a5fa' : 'rgba(96,165,250,0.35)');
+      ctx.fill();
+      if (isNeighbor) {
+        ctx.strokeStyle = p.c===1 ? '#fda4af' : '#93c5fd';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    });
+
+    // Draw star (new patient)
+    ctx.font = '22px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⭐', star.x, star.y);
+
+    // Vote count
+    const yesVotes = neighbors.filter(p=>p.c===1).length;
+    const noVotes  = k - yesVotes;
+    const pred = yesVotes > noVotes ? 'Diabetes ⚠' : 'No Diabetes ✓';
+    const col  = yesVotes > noVotes ? '#fb7185' : '#60a5fa';
+
+    kRes.innerHTML = `<span style="color:${col}">${pred}</span> &nbsp;·&nbsp; ${yesVotes} YES vs ${noVotes} NO`;
+  }
+
+  slider.addEventListener('input', () => {
+    const k = parseInt(slider.value);
+    kDisp.textContent = k;
+    drawKNN(k);
+  });
+
+  drawKNN(5);
+</script>
+</body>
+</html>
