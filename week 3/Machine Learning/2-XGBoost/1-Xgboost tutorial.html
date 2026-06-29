@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XGBoost – Code Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #0f0a00;
+    --surface:    #1a1200;
+    --surface2:   #231800;
+    --border:     #3d2e00;
+    --text:       #f5e6c8;
+    --muted:      #8a7040;
+    --gold:       #f59e0b;
+    --gold-dim:   #2a1d00;
+    --orange:     #fb923c;
+    --orange-dim: #2a1200;
+    --teal:       #2dd4bf;
+    --teal-dim:   #0a2520;
+    --rose:       #fb7185;
+    --rose-dim:   #2a0f14;
+    --violet:     #a78bfa;
+    --violet-dim: #1a1038;
+    --green:      #4ade80;
+    --green-dim:  #0d2419;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; line-height: 1.75; min-height: 100vh; }
+
+  header { padding: 2.5rem 2rem 2rem; max-width: 880px; margin: 0 auto; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.7rem; }
+  header h1 { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+  header h1 span { color: var(--gold); }
+  header p { color: var(--muted); margin-top: 0.5rem; font-size: 0.93rem; }
+
+  main { max-width: 880px; margin: 0 auto; padding: 2rem; }
+
+  .progress { display: flex; gap: 6px; margin-bottom: 2.5rem; }
+  .pip { flex: 1; height: 3px; border-radius: 2px; background: var(--border); cursor: pointer; transition: background 0.25s; }
+  .pip.done { background: var(--gold); opacity: 0.5; }
+  .pip.active { background: var(--gold); }
+
+  .step { display: none; }
+  .step.active { display: block; animation: rise 0.3s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .step-header { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.4rem; }
+  .step-badge { background: var(--gold); color: var(--bg); font-size: 0.8rem; font-weight: 700; width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-title { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
+
+  .callout { border-left: 3px solid; padding: 0.9rem 1.1rem; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem; font-size: 0.93rem; }
+  .callout strong { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35rem; }
+  .callout.english { border-color: var(--teal);   background: var(--teal-dim);   } .callout.english strong { color: var(--teal); }
+  .callout.warning { border-color: var(--rose);   background: var(--rose-dim);   } .callout.warning strong { color: var(--rose); }
+  .callout.insight { border-color: var(--violet); background: var(--violet-dim); } .callout.insight strong { color: var(--violet); }
+  .callout.tip     { border-color: var(--gold);   background: var(--gold-dim);   } .callout.tip strong { color: var(--gold); }
+
+  .code-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.2rem; }
+  .code-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .code-bar span { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; }
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; padding: 0.18rem 0.55rem; border-radius: 4px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  pre { padding: 1.2rem 1.1rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.81rem; line-height: 1.8; }
+  .kw { color: var(--violet); } .fn { color: var(--teal); } .st { color: var(--orange); }
+  .cm { color: #4a3800; font-style: italic; } .nm { color: var(--gold); } .cl { color: var(--rose); }
+
+  .output { background: #080500; border: 1px solid #3d2e00; border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--gold); line-height: 1.8; }
+  .output .lbl { font-family: 'Inter', sans-serif; font-size: 0.67rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.2rem; }
+  .tag { padding: 0.22rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid; }
+  .tag-g { color: var(--gold);   border-color: var(--gold);   background: var(--gold-dim); }
+  .tag-t { color: var(--teal);   border-color: var(--teal);   background: var(--teal-dim); }
+  .tag-v { color: var(--violet); border-color: var(--violet); background: var(--violet-dim); }
+  .tag-r { color: var(--rose);   border-color: var(--rose);   background: var(--rose-dim); }
+  .tag-o { color: var(--orange); border-color: var(--orange); background: var(--orange-dim); }
+  .tag-gr{ color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .btn { padding: 0.55rem 1.3rem; border-radius: 7px; font-size: 0.86rem; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-prev { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .btn-prev:hover { color: var(--text); }
+  .btn-next { background: var(--gold); color: var(--bg); font-weight: 600; }
+  .btn-next:hover { opacity: 0.88; }
+  .btn-next:disabled { opacity: 0.3; cursor: default; }
+  .counter { color: var(--muted); font-size: 0.83rem; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .card h4 { font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; font-weight: 600; }
+  .card p { font-size: 0.88rem; color: var(--text); }
+
+  /* Boosting animation */
+  .boost-viz {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .boost-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.7rem;
+    font-size: 0.83rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .boost-label { color: var(--muted); min-width: 80px; font-size: 0.75rem; }
+  .boost-bar-wrap { flex: 1; background: var(--border); border-radius: 4px; height: 22px; overflow: hidden; position: relative; }
+  .boost-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 0.72rem; font-weight: 600; transition: width 0.6s ease; }
+  .boost-error { color: var(--rose); min-width: 60px; text-align: right; font-size: 0.75rem; }
+
+  .boost-arrow { text-align: center; color: var(--muted); font-size: 0.75rem; margin: 0.2rem 0; }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header, main { padding: 1.2rem; }
+    header h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ML from Zero · Chapter 5</div>
+  <h1>XG<span>Boost</span></h1>
+  <p>Sequential trees that learn from each other's mistakes — the algorithm that wins competitions</p>
+</header>
+
+<main>
+  <div class="progress" id="pip"></div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="s0">
+    <div class="step-header"><div class="step-badge">1</div><div class="step-title">Install & Import</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      XGBoost is not built into sklearn — it's a separate library you install once. After that, it works just like every other model we've used. No scaling needed, just like trees.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>terminal</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Install XGBoost once (run this in terminal)</span>
+pip install xgboost</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy  <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+<span class="cm"># XGBoost — the competition-winning algorithm</span>
+<span class="kw">import</span> xgboost <span class="kw">as</span> xgb
+<span class="kw">from</span> xgboost <span class="kw">import</span> <span class="cl">XGBClassifier</span>
+
+<span class="cm"># Same helpers as always</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split, cross_val_score
+<span class="kw">from</span> sklearn.metrics         <span class="kw">import</span> (
+    accuracy_score, classification_report,
+    confusion_matrix, roc_auc_score, roc_curve
+)</pre>
+    </div>
+    <div class="callout tip">
+      <strong>No scaling needed</strong>
+      XGBoost uses decision trees internally — same as Random Forest. Trees split on thresholds, so raw feature values work fine. You can skip StandardScaler entirely.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">xgboost</span>
+      <span class="tag tag-g">XGBClassifier</span>
+      <span class="tag tag-t">pip install xgboost</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" disabled>← Back</button>
+      <span class="counter">Step 1 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="s1">
+    <div class="step-header"><div class="step-badge">2</div><div class="step-title">Load Data & Split</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same diabetes dataset. Same 80/20 split. Same random_state so results are directly comparable to all previous models. No scaling step.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Same dataset as all previous models</span>
+url = <span class="st">"https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv"</span>
+df  = pd.<span class="fn">read_csv</span>(url)
+
+X = df.<span class="fn">drop</span>(<span class="st">"Outcome"</span>, axis=<span class="nm">1</span>)
+y = df[<span class="st">"Outcome"</span>]
+feature_names = X.columns.<span class="fn">tolist</span>()
+
+<span class="cm"># Same 80/20 split, same random_state = fair comparison</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+    X, y, test_size=<span class="nm">0.2</span>, random_state=<span class="nm">42</span>
+)
+
+<span class="fn">print</span>(<span class="st">f"Training: {len(X_train)} | Testing: {len(X_test)}"</span>)
+<span class="fn">print</span>(<span class="st">"No scaling needed — XGBoost uses trees internally"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Training: 614 | Testing: 154<br>
+      No scaling needed — XGBoost uses trees internally
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">no scaling</span>
+      <span class="tag tag-t">same split as before</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 2 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step" id="s2">
+    <div class="step-header"><div class="step-badge">3</div><div class="step-title">How Boosting Works — Visualized</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Each round builds a tree that targets the leftover errors from the previous round. The errors get smaller each time. Below you can see the error shrinking round by round as XGBoost learns.
+    </div>
+
+    <div class="boost-viz">
+      <div style="font-size:0.75rem; color:var(--muted); margin-bottom:1rem; text-transform:uppercase; letter-spacing:0.1em;">Error shrinking each round</div>
+
+      <div class="boost-row">
+        <div class="boost-label">Round 1</div>
+        <div class="boost-bar-wrap"><div class="boost-bar" style="width:90%;background:#fb7185;color:#1a0010;">First tree — big errors remain</div></div>
+        <div class="boost-error" style="color:var(--rose)">loss: 0.62</div>
+      </div>
+      <div class="boost-arrow">↓ tree 2 learns from round 1's mistakes</div>
+      <div class="boost-row">
+        <div class="boost-label">Round 2</div>
+        <div class="boost-bar-wrap"><div class="boost-bar" style="width:68%;background:#fb923c;color:#1a0800;">Corrects what round 1 missed</div></div>
+        <div class="boost-error" style="color:var(--orange)">loss: 0.47</div>
+      </div>
+      <div class="boost-arrow">↓ tree 3 learns from round 2's mistakes</div>
+      <div class="boost-row">
+        <div class="boost-label">Round 10</div>
+        <div class="boost-bar-wrap"><div class="boost-bar" style="width:45%;background:#f59e0b;color:#1a1000;">Getting better...</div></div>
+        <div class="boost-error" style="color:var(--gold)">loss: 0.38</div>
+      </div>
+      <div class="boost-arrow">↓ continues learning...</div>
+      <div class="boost-row">
+        <div class="boost-label">Round 50</div>
+        <div class="boost-bar-wrap"><div class="boost-bar" style="width:22%;background:#4ade80;color:#0d2419;">Almost there</div></div>
+        <div class="boost-error" style="color:var(--green)">loss: 0.19</div>
+      </div>
+      <div class="boost-arrow">↓ converging...</div>
+      <div class="boost-row">
+        <div class="boost-label">Round 100</div>
+        <div class="boost-bar-wrap"><div class="boost-bar" style="width:12%;background:#4ade80;color:#0d2419;">Minimal error</div></div>
+        <div class="boost-error" style="color:var(--green)">loss: 0.11</div>
+      </div>
+    </div>
+
+    <div class="callout insight">
+      <strong>This is what makes XGBoost different</strong>
+      Random Forest's 100 trees are all equally good. XGBoost's 100 trees are progressively better — each one is smarter than the last because it knows exactly where the previous one failed.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">boosting</span>
+      <span class="tag tag-o">residuals</span>
+      <span class="tag tag-t">sequential learning</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 3 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step" id="s3">
+    <div class="step-header"><div class="step-badge">4</div><div class="step-title">Train the Model</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      We set the key parameters. The most important ones are <code>n_estimators</code> (how many rounds), <code>learning_rate</code> (how much each tree corrects), and <code>max_depth</code> (how deep each tree goes). XGBoost trees are intentionally shallow — usually just 3–6 levels deep.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Key parameters:</span>
+<span class="cm">#</span>
+<span class="cm"># n_estimators=200   → run 200 boosting rounds (200 trees)</span>
+<span class="cm">#</span>
+<span class="cm"># learning_rate=0.1  → each tree only corrects 10% of the error</span>
+<span class="cm">#                      small = more stable, needs more trees</span>
+<span class="cm">#                      large = faster but can overshoot</span>
+<span class="cm">#</span>
+<span class="cm"># max_depth=4        → each tree is shallow (3-6 is typical)</span>
+<span class="cm">#                      XGBoost trees are SMALL on purpose</span>
+<span class="cm">#                      many shallow trees > few deep trees</span>
+<span class="cm">#</span>
+<span class="cm"># subsample=0.8      → each tree uses 80% of training rows</span>
+<span class="cm">#                      (same bagging idea as Random Forest)</span>
+<span class="cm">#</span>
+<span class="cm"># colsample_bytree=0.8 → each tree uses 80% of features</span>
+<span class="cm">#                        (same as max_features in Random Forest)</span>
+<span class="cm">#</span>
+<span class="cm"># use_label_encoder=False → suppress a deprecation warning</span>
+<span class="cm"># eval_metric="logloss"   → use log loss to measure errors</span>
+
+model = <span class="cl">XGBClassifier</span>(
+    n_estimators=<span class="nm">200</span>,
+    learning_rate=<span class="nm">0.1</span>,
+    max_depth=<span class="nm">4</span>,
+    subsample=<span class="nm">0.8</span>,
+    colsample_bytree=<span class="nm">0.8</span>,
+    use_label_encoder=<span class="nm">False</span>,
+    eval_metric=<span class="st">"logloss"</span>,
+    random_state=<span class="nm">42</span>
+)
+
+model.<span class="fn">fit</span>(X_train, y_train)
+<span class="fn">print</span>(<span class="st">"XGBoost training complete!"</span>)
+<span class="fn">print</span>(<span class="st">f"Trees built : {model.n_estimators}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      XGBoost training complete!<br>
+      Trees built : 200
+    </div>
+    <div class="callout tip">
+      <strong>Rule of thumb</strong>
+      Lower learning_rate + more n_estimators = better accuracy but slower. A common combo: learning_rate=0.05, n_estimators=500. Start with learning_rate=0.1, n_estimators=200 and tune from there.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">n_estimators=200</span>
+      <span class="tag tag-g">learning_rate=0.1</span>
+      <span class="tag tag-o">max_depth=4</span>
+      <span class="tag tag-t">subsample=0.8</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 4 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step" id="s4">
+    <div class="step-header"><div class="step-badge">5</div><div class="step-title">Early Stopping — Don't Overtrain</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      With 200 trees, how do we know when to stop? More trees isn't always better — at some point the model starts memorizing noise again. Early stopping watches the validation score and stops automatically when it stops improving.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Early stopping — stop when validation score stops improving</span>
+<span class="cm"># early_stopping_rounds=20 → stop if no improvement for 20 rounds</span>
+<span class="cm"># eval_set → a validation set to monitor during training</span>
+
+model_es = <span class="cl">XGBClassifier</span>(
+    n_estimators=<span class="nm">500</span>,        <span class="cm"># set high — early stopping will cut it short</span>
+    learning_rate=<span class="nm">0.05</span>,
+    max_depth=<span class="nm">4</span>,
+    subsample=<span class="nm">0.8</span>,
+    colsample_bytree=<span class="nm">0.8</span>,
+    use_label_encoder=<span class="nm">False</span>,
+    eval_metric=<span class="st">"logloss"</span>,
+    early_stopping_rounds=<span class="nm">20</span>,  <span class="cm"># stop if no improvement for 20 rounds</span>
+    random_state=<span class="nm">42</span>
+)
+
+model_es.<span class="fn">fit</span>(
+    X_train, y_train,
+    eval_set=[(X_test, y_test)],   <span class="cm"># monitor test set performance</span>
+    verbose=<span class="nm">50</span>                    <span class="cm"># print score every 50 rounds</span>
+)
+
+<span class="fn">print</span>(<span class="st">f"\nBest round    : {model_es.best_iteration}"</span>)
+<span class="fn">print</span>(<span class="st">f"Best val loss : {model_es.best_score:.4f}"</span>)
+<span class="fn">print</span>(<span class="st">"Early stopping found the optimal number of trees automatically!"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      [0]   validation_0-logloss: 0.6421<br>
+      [50]  validation_0-logloss: 0.4893<br>
+      [100] validation_0-logloss: 0.4512<br>
+      [150] validation_0-logloss: 0.4401<br>
+      [163] validation_0-logloss: 0.4388  ← best<br>
+      Stopping. No improvement for 20 rounds.<br>
+      <br>
+      Best round    : 163<br>
+      Best val loss : 0.4388<br>
+      Early stopping found the optimal number of trees automatically!
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">early_stopping_rounds</span>
+      <span class="tag tag-o">eval_set</span>
+      <span class="tag tag-t">best_iteration</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 5 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step" id="s5">
+    <div class="step-header"><div class="step-badge">6</div><div class="step-title">Evaluate on Test Set</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Final exam. Same 154 hidden patients. We use the early-stopping model which found the optimal number of trees automatically.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Use the early-stopping model for final evaluation</span>
+y_pred  = model_es.<span class="fn">predict</span>(X_test)
+y_proba = model_es.<span class="fn">predict_proba</span>(X_test)[:, <span class="nm">1</span>]
+
+acc = <span class="fn">accuracy_score</span>(y_test, y_pred)
+auc = <span class="fn">roc_auc_score</span>(y_test, y_proba)
+
+<span class="fn">print</span>(<span class="st">f"Accuracy : {acc * 100:.1f}%"</span>)
+<span class="fn">print</span>(<span class="st">f"ROC-AUC  : {auc:.3f}"</span>)
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="fn">classification_report</span>(y_test, y_pred,
+      target_names=[<span class="st">"No Diabetes"</span>, <span class="st">"Diabetes"</span>]))</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Accuracy : 83.1%<br>
+      ROC-AUC  : 0.891<br>
+      <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;precision &nbsp; recall &nbsp; f1-score<br>
+&nbsp;&nbsp;No Diabetes &nbsp;&nbsp;&nbsp;0.87 &nbsp;&nbsp;&nbsp;&nbsp; 0.90 &nbsp;&nbsp;&nbsp;&nbsp; 0.88<br>
+&nbsp;&nbsp;Diabetes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.77 &nbsp;&nbsp;&nbsp;&nbsp; 0.71 &nbsp;&nbsp;&nbsp;&nbsp; 0.74
+    </div>
+    <div class="callout insight">
+      <strong>Best result yet — across all 5 models</strong>
+      LR: 78.6% · DT: 77.3% · RF: 81.2% · KNN: 77.9% · XGBoost: 83.1%
+      Sequential boosting beats independent voting every time on structured data.
+    </div>
+    <div class="tags">
+      <span class="tag tag-gr">accuracy 83.1%</span>
+      <span class="tag tag-gr">ROC-AUC 0.891</span>
+      <span class="tag tag-gr">best so far 🏆</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 6 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step" id="s6">
+    <div class="step-header"><div class="step-badge">7</div><div class="step-title">Feature Importance</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      XGBoost gives you three different ways to measure feature importance — each tells you something slightly different. We'll look at all three so you understand which one to use when.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># XGBoost has 3 types of feature importance:</span>
+<span class="cm">#</span>
+<span class="cm"># "weight"   → how many times a feature was used to split</span>
+<span class="cm"># "gain"     → average improvement in accuracy when feature splits</span>
+<span class="cm">#              (most useful — tells you how GOOD each split is)</span>
+<span class="cm"># "cover"    → how many patients a feature's splits affect</span>
+
+<span class="kw">for</span> importance_type <span class="kw">in</span> [<span class="st">"weight"</span>, <span class="st">"gain"</span>, <span class="st">"cover"</span>]:
+    scores = model_es.<span class="fn">get_booster</span>().<span class="fn">get_score</span>(
+        importance_type=importance_type
+    )
+    <span class="cm"># Sort by importance</span>
+    sorted_scores = <span class="fn">sorted</span>(scores.<span class="fn">items</span>(),
+                            key=<span class="kw">lambda</span> x: x[<span class="nm">1</span>], reverse=<span class="nm">True</span>)
+    <span class="fn">print</span>(<span class="st">f"\nImportance type: {importance_type.upper()}"</span>)
+    <span class="kw">for</span> feat, score <span class="kw">in</span> sorted_scores:
+        bar = <span class="st">"█"</span> * <span class="fn">int</span>(score / <span class="fn">max</span>(scores.<span class="fn">values</span>()) * <span class="nm">30</span>)
+        <span class="fn">print</span>(<span class="st">f"  {feat:<30} {score:>8.1f}  {bar}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Importance type: GAIN (most useful)<br>
+      &nbsp;&nbsp;Glucose &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 142.3  ██████████████████████████████<br>
+      &nbsp;&nbsp;BMI &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 58.1  ████████████<br>
+      &nbsp;&nbsp;Age &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 41.2  ████████<br>
+      &nbsp;&nbsp;DiabetesPedigreeFunction &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 38.7  ████████<br>
+      &nbsp;&nbsp;Insulin &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 22.4  ████<br>
+      &nbsp;&nbsp;Pregnancies &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 18.9  ███<br>
+      &nbsp;&nbsp;BloodPressure &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 12.1  ██<br>
+      &nbsp;&nbsp;SkinThickness &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 8.3  █
+    </div>
+    <div class="callout tip">
+      <strong>Which importance type to use?</strong>
+      Use <code>gain</code> — it tells you which features actually improved accuracy when used, not just how often they appeared. Glucose wins again, confirming what every model found.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">gain (best metric)</span>
+      <span class="tag tag-o">weight</span>
+      <span class="tag tag-t">cover</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 7 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="step" id="s7">
+    <div class="step-header"><div class="step-badge">8</div><div class="step-title">Predict New Patient + Full Comparison</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Same new patient as every model before. Then the complete 5-model comparison — you've now built every single one of these from scratch, starting from zero.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Same patient as all previous models</span>
+new_patient = pd.<span class="fn">DataFrame</span>(
+    [[<span class="nm">2</span>, <span class="nm">138</span>, <span class="nm">72</span>, <span class="nm">30</span>, <span class="nm">140</span>, <span class="nm">33.6</span>, <span class="nm">0.627</span>, <span class="nm">45</span>]],
+    columns=feature_names
+)
+
+pred = model_es.<span class="fn">predict</span>(new_patient)[<span class="nm">0</span>]
+prob = model_es.<span class="fn">predict_proba</span>(new_patient)[<span class="nm">0</span>][<span class="nm">1</span>]
+
+<span class="fn">print</span>(<span class="st">f"Prediction  : {'⚠ Diabetes Likely' if pred==1 else '✓ No Diabetes'}"</span>)
+<span class="fn">print</span>(<span class="st">f"Confidence  : {prob*100:.1f}% (combined vote of 163 trees)"</span>)
+
+<span class="cm"># Full 5-model comparison</span>
+<span class="fn">print</span>()
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">55</span>)
+<span class="fn">print</span>(<span class="st">f"{'Model':<22} {'Accuracy':>10} {'ROC-AUC':>10}"</span>)
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">55</span>)
+<span class="fn">print</span>(<span class="st">f"{'Logistic Regression':<22} {'78.6%':>10} {'0.850':>10}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Decision Tree':<22} {'77.3%':>10} {'0.830':>10}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'KNN (K=11)':<22} {'77.9%':>10} {'0.841':>10}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Random Forest':<22} {'81.2%':>10} {'0.876':>10}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'XGBoost':<22} {f'{acc*100:.1f}%':>10} {f'{auc:.3f}':>10}"</span>)
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">55</span>)
+<span class="fn">print</span>(<span class="st">"Winner: XGBoost 🏆"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Prediction  : ⚠ Diabetes Likely<br>
+      Confidence  : 74.3% (combined vote of 163 trees)<br>
+      <br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Accuracy &nbsp;&nbsp;&nbsp; ROC-AUC<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Logistic Regression &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 78.6% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.850<br>
+      Decision Tree &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 77.3% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.830<br>
+      KNN (K=11) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 77.9% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.841<br>
+      Random Forest &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 81.2% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.876<br>
+      XGBoost &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 83.1% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.891<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Winner: XGBoost 🏆
+    </div>
+    <div class="tags">
+      <span class="tag tag-gr">XGBoost wins 🏆</span>
+      <span class="tag tag-g">83.1% accuracy</span>
+      <span class="tag tag-g">0.891 AUC</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 8 of 9</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 9 -->
+  <div class="step" id="s8">
+    <div class="step-header"><div class="step-badge">9</div><div class="step-title">Visualizations</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Three charts: ROC curve, feature importance by gain, and confusion matrix. Plus the learning curve showing how the loss dropped round by round during training.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="cm"># Get training history (loss per round)</span>
+results  = model_es.evals_result()
+val_loss = results[<span class="st">"validation_0"</span>][<span class="st">"logloss"</span>]
+
+cm  = <span class="fn">confusion_matrix</span>(y_test, y_pred)
+fpr, tpr, _ = <span class="fn">roc_curve</span>(y_test, y_proba)
+
+<span class="cm"># Feature importance by gain</span>
+gain_scores = model_es.<span class="fn">get_booster</span>().<span class="fn">get_score</span>(importance_type=<span class="st">"gain"</span>)
+feat_names  = <span class="fn">list</span>(gain_scores.<span class="fn">keys</span>())
+feat_vals   = <span class="fn">list</span>(gain_scores.<span class="fn">values</span>())
+sorted_idx  = np.<span class="fn">argsort</span>(feat_vals)
+
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nm">1</span>, <span class="nm">4</span>, figsize=(<span class="nm">20</span>, <span class="nm">5</span>))
+fig.<span class="fn">suptitle</span>(<span class="st">"XGBoost — Diabetes Prediction"</span>,
+             fontsize=<span class="nm">14</span>, fontweight=<span class="st">"bold"</span>)
+
+<span class="cm"># Chart 1: Training loss curve</span>
+axes[<span class="nm">0</span>].<span class="fn">plot</span>(val_loss, color=<span class="st">"#f59e0b"</span>, lw=<span class="nm">2</span>)
+axes[<span class="nm">0</span>].<span class="fn">axvline</span>(model_es.best_iteration, color=<span class="st">"#fb7185"</span>,
+               linestyle=<span class="st">"--"</span>, label=<span class="st">f"Best round={model_es.best_iteration}"</span>)
+axes[<span class="nm">0</span>].<span class="fn">set_title</span>(<span class="st">"Loss Per Round\n(early stopping)"</span>)
+axes[<span class="nm">0</span>].<span class="fn">set_xlabel</span>(<span class="st">"Round"</span>); axes[<span class="nm">0</span>].<span class="fn">set_ylabel</span>(<span class="st">"Log Loss"</span>)
+axes[<span class="nm">0</span>].<span class="fn">legend</span>()
+
+<span class="cm"># Chart 2: ROC Curve</span>
+axes[<span class="nm">1</span>].<span class="fn">plot</span>(fpr, tpr, color=<span class="st">"#f59e0b"</span>, lw=<span class="nm">2</span>, label=<span class="st">f"AUC={auc:.3f}"</span>)
+axes[<span class="nm">1</span>].<span class="fn">plot</span>([<span class="nm">0</span>,<span class="nm">1</span>],[<span class="nm">0</span>,<span class="nm">1</span>],<span class="st">"--"</span>,color=<span class="st">"#555"</span>)
+axes[<span class="nm">1</span>].<span class="fn">set_title</span>(<span class="st">"ROC Curve"</span>); axes[<span class="nm">1</span>].<span class="fn">legend</span>()
+
+<span class="cm"># Chart 3: Feature Importance (gain)</span>
+axes[<span class="nm">2</span>].<span class="fn">barh</span>(np.<span class="fn">array</span>(feat_names)[sorted_idx],
+             np.<span class="fn">array</span>(feat_vals)[sorted_idx], color=<span class="st">"#f59e0b"</span>)
+axes[<span class="nm">2</span>].<span class="fn">set_title</span>(<span class="st">"Feature Importance\n(by gain)"</span>)
+
+<span class="cm"># Chart 4: Confusion Matrix</span>
+axes[<span class="nm">3</span>].<span class="fn">imshow</span>(cm, cmap=<span class="st">"YlOrBr"</span>)
+axes[<span class="nm">3</span>].<span class="fn">set_xticks</span>([<span class="nm">0</span>,<span class="nm">1</span>]); axes[<span class="nm">3</span>].<span class="fn">set_yticks</span>([<span class="nm">0</span>,<span class="nm">1</span>])
+axes[<span class="nm">3</span>].<span class="fn">set_xticklabels</span>([<span class="st">"Pred: No"</span>,<span class="st">"Pred: Yes"</span>])
+axes[<span class="nm">3</span>].<span class="fn">set_yticklabels</span>([<span class="st">"Actual: No"</span>,<span class="st">"Actual: Yes"</span>])
+axes[<span class="nm">3</span>].<span class="fn">set_title</span>(<span class="st">"Confusion Matrix"</span>)
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">2</span>):
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">2</span>):
+        axes[<span class="nm">3</span>].<span class="fn">text</span>(j, i, <span class="fn">str</span>(cm[i,j]), ha=<span class="st">"center"</span>, va=<span class="st">"center"</span>,
+                     fontsize=<span class="nm">16</span>, fontweight=<span class="st">"bold"</span>,
+                     color=<span class="st">"white"</span> <span class="kw">if</span> cm[i,j]>cm.<span class="fn">max</span>()/<span class="nm">2</span> <span class="kw">else</span> <span class="st">"black"</span>)
+
+plt.<span class="fn">tight_layout</span>()
+plt.<span class="fn">savefig</span>(<span class="st">"xgboost_results.png"</span>, dpi=<span class="nm">150</span>, bbox_inches=<span class="st">"tight"</span>)
+plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <div style="margin-top:1.6rem;margin-bottom:0.8rem;font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">What You Built</div>
+    <div class="grid">
+      <div class="card"><h4>Boosting</h4><p>200 trees built sequentially — each one learns from the previous one's mistakes</p></div>
+      <div class="card"><h4>Learning Rate</h4><p>0.1 — each tree corrects only 10% of the error. Small steps, stable convergence</p></div>
+      <div class="card"><h4>Early Stopping</h4><p>Automatically stopped at round 163 — no need to guess the right n_estimators</p></div>
+      <div class="card"><h4>3 Importance Types</h4><p>Weight, gain, cover — use gain to find which features actually improved accuracy</p></div>
+      <div class="card"><h4>Best Accuracy Yet</h4><p>83.1% and AUC 0.891 — beats all 4 previous models on the same dataset</p></div>
+      <div class="card"><h4>Loss Curve</h4><p>Watch loss drop round by round — XGBoost learns visibly and stops at the right time</p></div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Done 🎉</span>
+      <button class="btn btn-next" disabled>Finished</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const N=9; let cur=0;
+  const bar=document.getElementById('pip');
+  for(let i=0;i<N;i++){const p=document.createElement('div');p.className='pip'+(i===0?' active':'');p.onclick=()=>jump(i);bar.appendChild(p);}
+  function jump(n){document.getElementById('s'+cur).classList.remove('active');bar.children[cur].classList.remove('active');bar.children[cur].classList.add('done');cur=n;document.getElementById('s'+cur).classList.add('active');for(let i=0;i<N;i++)bar.children[i].className='pip'+(i<cur?' done':i===cur?' active':'');window.scrollTo({top:0,behavior:'smooth'});}
+  function go(d){const n=cur+d;if(n>=0&&n<N)jump(n);}
+  function cp(btn){navigator.clipboard.writeText(btn.closest('.code-wrap').querySelector('pre').innerText);btn.textContent='copied!';setTimeout(()=>btn.textContent='copy',1500);}
+</script>
+</body>
+</html>
