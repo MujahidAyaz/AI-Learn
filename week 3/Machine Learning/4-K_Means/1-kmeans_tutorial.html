@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-Means – Code Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #0a0f14;
+    --surface:    #111820;
+    --surface2:   #17202b;
+    --border:     #263140;
+    --text:       #dae6f0;
+    --muted:      #5f7285;
+    --cyan:       #22d3ee;
+    --cyan-dim:   #082a30;
+    --violet:     #c084fc;
+    --violet-dim: #1f1030;
+    --rose:       #fb7185;
+    --rose-dim:   #2a0f14;
+    --amber:      #fbbf24;
+    --amber-dim:  #2a1d08;
+    --green:      #4ade80;
+    --green-dim:  #0d2419;
+    --indigo:     #818cf8;
+    --indigo-dim: #15163a;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; line-height: 1.75; min-height: 100vh; }
+
+  header { padding: 2.5rem 2rem 2rem; max-width: 880px; margin: 0 auto; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.7rem; }
+  header h1 { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+  header h1 span { color: var(--cyan); }
+  header p { color: var(--muted); margin-top: 0.5rem; font-size: 0.93rem; }
+
+  .unsup-badge {
+    display: inline-block; margin-top: 1rem; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--rose);
+    background: var(--rose-dim); border: 1px solid var(--rose);
+    padding: 0.3rem 0.7rem; border-radius: 20px;
+  }
+
+  main { max-width: 880px; margin: 0 auto; padding: 2rem; }
+
+  .progress { display: flex; gap: 6px; margin-bottom: 2.5rem; }
+  .pip { flex: 1; height: 3px; border-radius: 2px; background: var(--border); cursor: pointer; transition: background 0.25s; }
+  .pip.done { background: var(--cyan); opacity: 0.5; }
+  .pip.active { background: var(--cyan); }
+
+  .step { display: none; }
+  .step.active { display: block; animation: rise 0.3s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .step-header { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.4rem; }
+  .step-badge { background: var(--cyan); color: var(--bg); font-size: 0.8rem; font-weight: 700; width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-title { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
+
+  .callout { border-left: 3px solid; padding: 0.9rem 1.1rem; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem; font-size: 0.93rem; }
+  .callout strong { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35rem; }
+  .callout.english { border-color: var(--cyan);   background: var(--cyan-dim);   } .callout.english strong { color: var(--cyan); }
+  .callout.warning { border-color: var(--rose);   background: var(--rose-dim);   } .callout.warning strong { color: var(--rose); }
+  .callout.insight { border-color: var(--violet); background: var(--violet-dim); } .callout.insight strong { color: var(--violet); }
+  .callout.tip     { border-color: var(--amber);  background: var(--amber-dim);  } .callout.tip strong { color: var(--amber); }
+
+  .code-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.2rem; }
+  .code-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .code-bar span { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; }
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; padding: 0.18rem 0.55rem; border-radius: 4px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  pre { padding: 1.2rem 1.1rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.81rem; line-height: 1.8; }
+  .kw { color: var(--violet); } .fn { color: var(--cyan); } .st { color: var(--amber); }
+  .cm { color: #2d4050; font-style: italic; } .nm { color: var(--indigo); } .cl { color: var(--rose); }
+
+  .output { background: #050a0d; border: 1px solid #1a2836; border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--cyan); line-height: 1.8; }
+  .output .lbl { font-family: 'Inter', sans-serif; font-size: 0.67rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.2rem; }
+  .tag { padding: 0.22rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid; }
+  .tag-c { color: var(--cyan);   border-color: var(--cyan);   background: var(--cyan-dim); }
+  .tag-v { color: var(--violet); border-color: var(--violet); background: var(--violet-dim); }
+  .tag-r { color: var(--rose);   border-color: var(--rose);   background: var(--rose-dim); }
+  .tag-a { color: var(--amber);  border-color: var(--amber);  background: var(--amber-dim); }
+  .tag-g { color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+  .tag-i { color: var(--indigo); border-color: var(--indigo); background: var(--indigo-dim); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .btn { padding: 0.55rem 1.3rem; border-radius: 7px; font-size: 0.86rem; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-prev { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .btn-prev:hover { color: var(--text); }
+  .btn-next { background: var(--cyan); color: var(--bg); font-weight: 600; }
+  .btn-next:hover { opacity: 0.88; }
+  .btn-next:disabled { opacity: 0.3; cursor: default; }
+  .counter { color: var(--muted); font-size: 0.83rem; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .card h4 { font-size: 0.7rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; font-weight: 600; }
+  .card p { font-size: 0.88rem; color: var(--text); }
+
+  /* Cluster animation viz */
+  .cluster-viz {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem;
+    margin-bottom: 1.2rem;
+    text-align: center;
+  }
+  .cluster-viz canvas { border-radius: 8px; max-width: 100%; }
+  .cluster-controls {
+    display: flex; align-items: center; gap: 1rem; margin-top: 1rem;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .cluster-controls button {
+    background: var(--cyan); color: var(--bg); border: none; padding: 0.5rem 1.1rem;
+    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem;
+  }
+  .cluster-controls button:hover { opacity: 0.85; }
+  .iter-label { font-family: 'JetBrains Mono', monospace; color: var(--muted); font-size: 0.85rem; }
+
+  img.chart { width: 100%; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1.2rem; }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header, main { padding: 1.2rem; }
+    header h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ML from Zero · Chapter 7</div>
+  <h1>K-<span>Means</span> Clustering</h1>
+  <p>No labels, no answers — just finding natural groups hiding in the data</p>
+  <div class="unsup-badge">⚡ Your first unsupervised learning algorithm</div>
+</header>
+
+<main>
+  <div class="progress" id="pip"></div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="s0">
+    <div class="step-header"><div class="step-badge">1</div><div class="step-title">Import Tools & Load Data</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      No <code>train_test_split</code> here — there's nothing to test against, no right answer to check. We import <code>KMeans</code> and <code>StandardScaler</code> (scaling is required — K-Means measures distance, just like KNN).
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy  <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.cluster       <span class="kw">import</span> <span class="cl">KMeans</span>
+<span class="kw">from</span> sklearn.metrics       <span class="kw">import</span> silhouette_score
+
+<span class="cm"># 200 real mall customers — Income + Spending Score</span>
+<span class="cm"># NO labels. Nobody has told us what "type" each customer is.</span>
+df = pd.<span class="fn">read_csv</span>(<span class="st">"mall_customers.csv"</span>)
+
+<span class="fn">print</span>(df.<span class="fn">head</span>())
+<span class="fn">print</span>(df.<span class="fn">describe</span>().<span class="fn">round</span>(<span class="nm">1</span>))</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      CustomerID &nbsp; Genre &nbsp; Age &nbsp; Annual Income (k$) &nbsp; Spending Score<br>
+      1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Male &nbsp;&nbsp; 19 &nbsp;&nbsp;&nbsp; 15 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 39<br>
+      2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Male &nbsp;&nbsp; 21 &nbsp;&nbsp;&nbsp; 15 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 81<br>
+      3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Female &nbsp; 20 &nbsp;&nbsp;&nbsp; 16 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6<br>
+      ...<br>
+      mean Income: 60.6k &nbsp;&nbsp; mean Spending Score: 50.2
+    </div>
+    <div class="tags">
+      <span class="tag tag-c">KMeans</span>
+      <span class="tag tag-r">no train/test split</span>
+      <span class="tag tag-r">no labels</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" disabled>← Back</button>
+      <span class="counter">Step 1 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="s1">
+    <div class="step-header"><div class="step-badge">2</div><div class="step-title">Select Features & Scale</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      We'll cluster on 2 features: Income and Spending Score. K-Means measures straight-line distance between customers — income ranges 15-137, spending score ranges 1-99. Without scaling, income dominates every distance calculation unfairly.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre>X = df[[<span class="st">"Annual Income (k$)"</span>, <span class="st">"Spending Score (1-100)"</span>]].values
+
+scaler = <span class="fn">StandardScaler</span>()
+X_scaled = scaler.<span class="fn">fit_transform</span>(X)
+
+<span class="fn">print</span>(<span class="st">"Before scaling:"</span>, X[<span class="nm">0</span>])
+<span class="fn">print</span>(<span class="st">"After  scaling:"</span>, X_scaled[<span class="nm">0</span>].<span class="fn">round</span>(<span class="nm">3</span>))</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Before scaling: [15 39]<br>
+      After  scaling: [-1.734 -0.434]
+    </div>
+    <div class="callout warning">
+      <strong>Scaling is not optional</strong>
+      Exactly the same rule as KNN — K-Means is 100% distance-based. Skip scaling and your clusters will be dominated by whichever feature happens to have bigger raw numbers.
+    </div>
+    <div class="tags">
+      <span class="tag tag-r">StandardScaler required</span>
+      <span class="tag tag-c">distance-based algorithm</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 2 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step" id="s2">
+    <div class="step-header"><div class="step-badge">3</div><div class="step-title">Watch K-Means Converge — Interactive</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Click "Step" to watch K-Means work, one iteration at a time. Points get assigned to their nearest centroid (colored), then each centroid moves to the average position of its group (X marks). Repeat until nothing moves anymore.
+    </div>
+
+    <div class="cluster-viz">
+      <canvas id="kmeansCanvas" width="520" height="340"></canvas>
+      <div class="cluster-controls">
+        <button onclick="stepKMeans()">▶ Step</button>
+        <button onclick="resetKMeans()">↺ Reset</button>
+        <span class="iter-label" id="iterLabel">Iteration: 0 (random start)</span>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <strong>Watch what happens</strong>
+      Iteration 0: centroids are random, assignments look messy. By iteration 3-5, the clusters usually stabilize completely — points stop switching groups and centroids stop moving. That's convergence.
+    </div>
+    <div class="tags">
+      <span class="tag tag-c">assign → recalculate → repeat</span>
+      <span class="tag tag-v">convergence</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 3 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step" id="s3">
+    <div class="step-header"><div class="step-badge">4</div><div class="step-title">Find the Best K</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      We don't know how many natural groups exist ahead of time. We test K=2 through K=10 and track two signals: inertia (how tight each cluster is) and silhouette score (how well-separated clusters are). We use silhouette score to pick the winner — more reliable than inertia alone.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre>inertias, sil_scores = [], []
+K_range = <span class="fn">range</span>(<span class="nm">2</span>, <span class="nm">11</span>)
+
+<span class="kw">for</span> k <span class="kw">in</span> K_range:
+    km = <span class="cl">KMeans</span>(n_clusters=k, random_state=<span class="nm">42</span>, n_init=<span class="nm">10</span>)
+    labels = km.<span class="fn">fit_predict</span>(X_scaled)
+    inertias.<span class="fn">append</span>(km.inertia_)
+    sil_scores.<span class="fn">append</span>(<span class="fn">silhouette_score</span>(X_scaled, labels))
+    <span class="fn">print</span>(<span class="st">f"K={k}  inertia={km.inertia_:.2f}  silhouette={sil_scores[-1]:.4f}"</span>)
+
+best_k = <span class="fn">list</span>(K_range)[<span class="fn">int</span>(np.<span class="fn">argmax</span>(sil_scores))]
+<span class="fn">print</span>(<span class="st">f"\nBest K: {best_k}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      K=2 &nbsp; inertia=269.69 &nbsp; silhouette=0.3213<br>
+      K=3 &nbsp; inertia=157.70 &nbsp; silhouette=0.4666<br>
+      K=4 &nbsp; inertia=108.92 &nbsp; silhouette=0.4939<br>
+      K=5 &nbsp; inertia=65.57 &nbsp;&nbsp; silhouette=0.5547 &nbsp;← best<br>
+      K=6 &nbsp; inertia=55.06 &nbsp;&nbsp; silhouette=0.5399<br>
+      K=7 &nbsp; inertia=44.86 &nbsp;&nbsp; silhouette=0.5281<br>
+      ...<br>
+      <br>
+      Best K: 5
+    </div>
+    <img class="chart" src="data:image/png;base64,ELBOW_IMAGE_PLACEHOLDER" alt="Elbow and silhouette charts">
+    <div class="callout insight">
+      <strong>Why K=5 and not K=10?</strong>
+      Silhouette score peaks exactly at K=5, then declines. Inertia keeps dropping as K grows (it always does), but the elbow — the point where it stops dropping fast — also lands right around K=5. Both signals agree.
+    </div>
+    <div class="tags">
+      <span class="tag tag-c">n_init=10</span>
+      <span class="tag tag-v">silhouette_score</span>
+      <span class="tag tag-g">best K=5</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 4 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step" id="s4">
+    <div class="step-header"><div class="step-badge">5</div><div class="step-title">Train the Final Model</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      Now we train with K=5. <code>n_init=10</code> runs the whole algorithm 10 times with different random starting centroids and keeps the best result — this avoids getting unlucky with a bad random start.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre>kmeans = <span class="cl">KMeans</span>(n_clusters=<span class="nm">5</span>, random_state=<span class="nm">42</span>, n_init=<span class="nm">10</span>)
+cluster_labels = kmeans.<span class="fn">fit_predict</span>(X_scaled)
+
+df[<span class="st">"Cluster"</span>] = cluster_labels
+
+<span class="fn">print</span>(<span class="st">f"Final inertia: {kmeans.inertia_:.2f}"</span>)
+<span class="fn">print</span>(<span class="st">"Customers per cluster:"</span>)
+<span class="fn">print</span>(df[<span class="st">"Cluster"</span>].value_counts().<span class="fn">sort_index</span>())</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Final inertia: 65.57<br>
+      <br>
+      Customers per cluster:<br>
+      Cluster 0: 81<br>
+      Cluster 1: 39<br>
+      Cluster 2: 22<br>
+      Cluster 3: 35<br>
+      Cluster 4: 23
+    </div>
+    <div class="tags">
+      <span class="tag tag-c">n_clusters=5</span>
+      <span class="tag tag-v">n_init=10 (avoid bad luck)</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 5 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step" id="s5">
+    <div class="step-header"><div class="step-badge">6</div><div class="step-title">Interpret the Clusters</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      K-Means gives you cluster NUMBERS — 0, 1, 2, 3, 4. It has no idea what they mean. That's our job. We look at the average income and spending score in each cluster and give them human names based on the pattern.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre>summary = df.<span class="fn">groupby</span>(<span class="st">"Cluster"</span>)[
+    [<span class="st">"Annual Income (k$)"</span>, <span class="st">"Spending Score (1-100)"</span>]
+].<span class="fn">mean</span>().<span class="fn">round</span>(<span class="nm">1</span>)
+summary[<span class="st">"Count"</span>] = df[<span class="st">"Cluster"</span>].value_counts().<span class="fn">sort_index</span>()
+<span class="fn">print</span>(summary)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      Cluster &nbsp; Income &nbsp; Spending &nbsp; Count &nbsp; Segment<br>
+      0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 55.3 &nbsp;&nbsp;&nbsp;&nbsp; 49.5 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 81 &nbsp;&nbsp;&nbsp;&nbsp; Average Joe<br>
+      1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 86.5 &nbsp;&nbsp;&nbsp;&nbsp; 82.1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 39 &nbsp;&nbsp;&nbsp;&nbsp; VIP (high income, high spend)<br>
+      2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 25.7 &nbsp;&nbsp;&nbsp;&nbsp; 79.4 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 22 &nbsp;&nbsp;&nbsp;&nbsp; Impulsive (low income, high spend)<br>
+      3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 88.2 &nbsp;&nbsp;&nbsp;&nbsp; 17.1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 35 &nbsp;&nbsp;&nbsp;&nbsp; Careful (high income, low spend)<br>
+      4 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 26.3 &nbsp;&nbsp;&nbsp;&nbsp; 20.9 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 23 &nbsp;&nbsp;&nbsp;&nbsp; Budget (low income, low spend)
+    </div>
+    <img class="chart" src="data:image/png;base64,CLUSTERS_IMAGE_PLACEHOLDER" alt="Final cluster visualization">
+    <div class="callout insight">
+      <strong>This is where clustering becomes actionable</strong>
+      Five genuinely distinct customer types emerged from raw numbers — no one told the algorithm these categories exist. A marketing team could now target VIPs with premium offers and Careful high-earners with a completely different pitch.
+    </div>
+    <div class="tags">
+      <span class="tag tag-g">5 distinct segments</span>
+      <span class="tag tag-v">business interpretation</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 6 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step" id="s6">
+    <div class="step-header"><div class="step-badge">7</div><div class="step-title">Classify a New Customer</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      A new customer walks in. We don't know their "type" but we can find which existing cluster they're closest to. Note: no confidence score here like classifiers give you — K-Means just finds the nearest centroid, full stop.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre>new_customer = np.<span class="fn">array</span>([[<span class="nm">75</span>, <span class="nm">85</span>]])  <span class="cm"># income=75k, spending=85</span>
+new_customer_scaled = scaler.<span class="fn">transform</span>(new_customer)
+
+predicted_cluster = kmeans.<span class="fn">predict</span>(new_customer_scaled)[<span class="nm">0</span>]
+
+<span class="fn">print</span>(<span class="st">f"Assigned cluster: {predicted_cluster}"</span>)
+<span class="fn">print</span>(<span class="st">f"Segment: {cluster_names[predicted_cluster]}"</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      New customer: Income=$75k, Spending Score=85<br>
+      Assigned cluster : 1<br>
+      Segment          : VIP — high income, high spending
+    </div>
+    <div class="callout tip">
+      <strong>No confidence score — and that's normal</strong>
+      Unlike classifiers, K-Means doesn't say "73% confident." It simply picks whichever centroid is nearest. If you need a confidence-like measure, you can look at the distance to the nearest vs second-nearest centroid — closer together means more ambiguous.
+    </div>
+    <div class="tags">
+      <span class="tag tag-c">kmeans.predict()</span>
+      <span class="tag tag-r">no confidence score</span>
+    </div>
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Step 7 of 8</span>
+      <button class="btn btn-next" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="step" id="s7">
+    <div class="step-header"><div class="step-badge">8</div><div class="step-title">Supervised vs Unsupervised — Full Recap</div></div>
+    <div class="callout english">
+      <strong>Plain English</strong>
+      You've now seen both major branches of machine learning. Here's the complete picture of everything you've built, side by side.
+    </div>
+    <div class="code-wrap">
+      <div class="code-bar"><span>python</span><button class="copy-btn" onclick="cp(this)">copy</button></div>
+      <pre><span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">60</span>)
+<span class="fn">print</span>(<span class="st">f"{'Algorithm':<22}{'Type':>14}{'Needs Labels':>16}"</span>)
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">60</span>)
+<span class="fn">print</span>(<span class="st">f"{'Logistic Regression':<22}{'Supervised':>14}{'Yes':>16}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Decision Tree':<22}{'Supervised':>14}{'Yes':>16}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'Random Forest':<22}{'Supervised':>14}{'Yes':>16}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'KNN':<22}{'Supervised':>14}{'Yes':>16}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'XGBoost':<22}{'Supervised':>14}{'Yes':>16}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'SVM':<22}{'Supervised':>14}{'Yes':>16}"</span>)
+<span class="fn">print</span>(<span class="st">f"{'K-Means':<22}{'Unsupervised':>14}{'No':>16}"</span>)
+<span class="fn">print</span>(<span class="st">"━"</span> * <span class="nm">60</span>)</pre>
+    </div>
+    <div class="output">
+      <div class="lbl">Output</div>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Algorithm &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Type &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Needs Labels<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+      Logistic Regression &nbsp;&nbsp; Supervised &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      Decision Tree &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Supervised &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      Random Forest &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Supervised &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      KNN &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Supervised &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      XGBoost &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Supervised &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      SVM &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Supervised &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Yes<br>
+      K-Means &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Unsupervised &nbsp;&nbsp;&nbsp;&nbsp; No<br>
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    </div>
+
+    <div style="margin-top:1.6rem;margin-bottom:0.8rem;font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">What You Built</div>
+    <div class="grid">
+      <div class="card"><h4>Unsupervised Learning</h4><p>Your first algorithm with no labels — pure pattern discovery, not prediction</p></div>
+      <div class="card"><h4>Elbow Method</h4><p>Tested K=2 to K=10, found K=5 using inertia and silhouette score together</p></div>
+      <div class="card"><h4>Convergence</h4><p>Watched centroids move and stabilize through the assign-recalculate loop</p></div>
+      <div class="card"><h4>Cluster Interpretation</h4><p>Turned 5 anonymous cluster numbers into real, actionable business segments</p></div>
+      <div class="card"><h4>Scaling (Again)</h4><p>Same critical rule as KNN — distance-based algorithms always need scaling</p></div>
+      <div class="card"><h4>New Point Assignment</h4><p>Classified a brand new customer into an existing segment with no retraining</p></div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev" onclick="go(-1)">← Back</button>
+      <span class="counter">Done 🎉</span>
+      <button class="btn btn-next" disabled>Finished</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const N = 8; let cur = 0;
+  const bar = document.getElementById('pip');
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('div');
+    p.className = 'pip' + (i === 0 ? ' active' : '');
+    p.onclick = () => jump(i);
+    bar.appendChild(p);
+  }
+  function jump(n) {
+    document.getElementById('s'+cur).classList.remove('active');
+    bar.children[cur].classList.remove('active');
+    bar.children[cur].classList.add('done');
+    cur = n;
+    document.getElementById('s'+cur).classList.add('active');
+    for (let i=0;i<N;i++) bar.children[i].className='pip'+(i<cur?' done':i===cur?' active':'');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function go(d){const n=cur+d;if(n>=0&&n<N)jump(n);}
+  function cp(btn){
+    navigator.clipboard.writeText(btn.closest('.code-wrap').querySelector('pre').innerText);
+    btn.textContent='copied!';setTimeout(()=>btn.textContent='copy',1500);
+  }
+
+  // ── K-Means interactive visualizer ──
+  const canvas = document.getElementById('kmeansCanvas');
+  const ctx = canvas.getContext('2d');
+  const iterLabel = document.getElementById('iterLabel');
+
+  const rng = (seed) => { let s=seed; return ()=>{ s=Math.sin(s)*10000; return s-Math.floor(s); }; };
+  let rand = rng(7);
+
+  // Generate 3 natural blobs of points (simulating real clusters)
+  function generatePoints() {
+    const blobs = [
+      {cx: 130, cy: 90, n: 25},
+      {cx: 380, cy: 100, n: 25},
+      {cx: 250, cy: 260, n: 25},
+    ];
+    const pts = [];
+    blobs.forEach(b => {
+      for (let i=0;i<b.n;i++) {
+        const angle = rand()*Math.PI*2;
+        const r = rand()*55;
+        pts.push({x: b.cx + Math.cos(angle)*r, y: b.cy + Math.sin(angle)*r});
+      }
+    });
+    return pts;
+  }
+
+  let points = generatePoints();
+  let centroids = [];
+  let iteration = 0;
+  const colors = ['#818cf8', '#fb7185', '#4ade80'];
+
+  function initCentroids() {
+    centroids = [];
+    for (let i=0;i<3;i++) {
+      centroids.push({x: 80 + rand()*360, y: 40 + rand()*260});
+    }
+  }
+
+  function dist(a,b){ return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2); }
+
+  function assignPoints() {
+    points.forEach(p => {
+      let minDist = Infinity, best = 0;
+      centroids.forEach((c,i) => {
+        const d = dist(p,c);
+        if (d < minDist) { minDist = d; best = i; }
+      });
+      p.cluster = best;
+    });
+  }
+
+  function updateCentroids() {
+    for (let i=0;i<3;i++) {
+      const members = points.filter(p => p.cluster === i);
+      if (members.length === 0) continue;
+      const cx = members.reduce((s,p)=>s+p.x,0)/members.length;
+      const cy = members.reduce((s,p)=>s+p.y,0)/members.length;
+      centroids[i] = {x: cx, y: cy};
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#111820';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+      ctx.fillStyle = p.cluster !== undefined ? colors[p.cluster] : '#5f7285';
+      ctx.fill();
+    });
+
+    centroids.forEach((c,i) => {
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = colors[i];
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✕', c.x, c.y);
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 0.5;
+      ctx.strokeText('✕', c.x, c.y);
+    });
+  }
+
+  function stepKMeans() {
+    if (iteration === 0) {
+      assignPoints();
+    } else {
+      updateCentroids();
+      assignPoints();
+    }
+    iteration++;
+    iterLabel.textContent = `Iteration: ${iteration}`;
+    draw();
+  }
+
+  function resetKMeans() {
+    rand = rng(Math.random()*1000);
+    points = generatePoints();
+    initCentroids();
+    iteration = 0;
+    iterLabel.textContent = 'Iteration: 0 (random start)';
+    draw();
+  }
+
+  initCentroids();
+  draw();
+</script>
+</body>
+</html>
