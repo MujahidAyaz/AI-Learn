@@ -273,7 +273,7 @@ FINAL-PROJECT-income-classification-comparison/
 Clone the repository
 
 ```bash
-git clone [https://github.com/MujahidAyaz/AI-Learn/week 4/Machine Learning/FINAL-PROJECT-income-classification-comparison](https://github.com/MujahidAyaz/AI-Learn/tree/28b1e40c769f066187d87abac73d4da45ba295c1/week%204/Machine%20Learning/FINAL-PROJECT-income-classification-comparison).git
+git clone https://github.com/MujahidAyaz/AI-Learn.git
 ```
 
 Move into the project directory
