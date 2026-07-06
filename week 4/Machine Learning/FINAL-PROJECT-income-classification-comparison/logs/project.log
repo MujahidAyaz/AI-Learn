@@ -1,0 +1,102 @@
+2026-07-06 12:29:10 | INFO     | __main__ | ================================================================================
+2026-07-06 12:29:10 | INFO     | __main__ | Adult Income Classification Project Started
+2026-07-06 12:29:10 | INFO     | __main__ | ================================================================================
+2026-07-06 12:29:10 | INFO     | src.data_loader | Loading dataset...
+2026-07-06 12:29:10 | INFO     | src.data_loader | Downloading dataset from UCI repository...
+2026-07-06 12:29:38 | INFO     | src.data_loader | Dataset cached at D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\data\raw\adult_income.csv
+2026-07-06 12:29:38 | WARNING  | src.data_loader | 24 duplicate rows detected.
+2026-07-06 12:29:38 | INFO     | src.data_loader | Dataset validation completed successfully.
+2026-07-06 12:29:38 | INFO     | src.data_loader | Dataset loaded successfully (32561 rows, 15 columns).
+2026-07-06 12:29:38 | INFO     | src.preprocessing | Starting data preprocessing...
+2026-07-06 12:29:38 | INFO     | src.preprocessing | Detected 6 numerical and 8 categorical features.
+2026-07-06 12:29:38 | INFO     | src.preprocessing | Training samples: 26048 | Test samples: 6513
+2026-07-06 12:29:38 | INFO     | src.trainer | Starting model training...
+2026-07-06 12:29:38 | INFO     | src.models | Initialized 7 machine learning models.
+2026-07-06 12:29:38 | INFO     | src.trainer | ======================================================================
+2026-07-06 12:29:38 | INFO     | src.trainer | Training Logistic Regression
+2026-07-06 12:29:38 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 12:30:06 | INFO     | src.trainer | Best Score: 0.8503
+2026-07-06 12:30:06 | INFO     | src.trainer | Best Parameters: {'model__C': 1, 'model__penalty': 'l2'}
+2026-07-06 12:30:06 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\logistic_regression.joblib
+2026-07-06 12:30:06 | INFO     | src.trainer | Logistic Regression completed in 27.49 seconds.
+2026-07-06 12:30:06 | INFO     | src.trainer | ======================================================================
+2026-07-06 12:30:06 | INFO     | src.trainer | Training KNN
+2026-07-06 12:30:06 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 12:32:49 | INFO     | src.trainer | Best Score: 0.8370
+2026-07-06 12:32:49 | INFO     | src.trainer | Best Parameters: {'model__n_neighbors': 9, 'model__weights': 'uniform'}
+2026-07-06 12:32:49 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\knn.joblib
+2026-07-06 12:32:49 | INFO     | src.trainer | KNN completed in 163.26 seconds.
+2026-07-06 12:32:49 | INFO     | src.trainer | ======================================================================
+2026-07-06 12:32:49 | INFO     | src.trainer | Training SVM
+2026-07-06 12:32:49 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 14:38:49 | INFO     | __main__ | ================================================================================
+2026-07-06 14:38:49 | INFO     | __main__ | Adult Income Classification Project Started
+2026-07-06 14:38:49 | INFO     | __main__ | ================================================================================
+2026-07-06 14:38:49 | INFO     | src.data_loader | Loading dataset...
+2026-07-06 14:38:49 | INFO     | src.data_loader | Loading dataset from cache: D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\data\raw\adult_income.csv
+2026-07-06 14:38:51 | WARNING  | src.data_loader | 24 duplicate rows detected.
+2026-07-06 14:38:51 | INFO     | src.data_loader | Dataset validation completed successfully.
+2026-07-06 14:38:51 | INFO     | src.data_loader | Dataset loaded successfully (32561 rows, 15 columns).
+2026-07-06 14:38:51 | INFO     | src.preprocessing | Starting data preprocessing...
+2026-07-06 14:38:51 | INFO     | src.preprocessing | Detected 6 numerical and 8 categorical features.
+2026-07-06 14:38:52 | INFO     | src.preprocessing | Training samples: 26048 | Test samples: 6513
+2026-07-06 14:38:52 | INFO     | src.trainer | Starting model training...
+2026-07-06 14:38:52 | INFO     | src.models | Initialized 7 machine learning models.
+2026-07-06 14:38:52 | INFO     | src.trainer | ======================================================================
+2026-07-06 14:38:52 | INFO     | src.trainer | Training Logistic Regression
+2026-07-06 14:38:52 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 14:39:36 | INFO     | src.trainer | Best Score: 0.8503
+2026-07-06 14:39:36 | INFO     | src.trainer | Best Parameters: {'model__C': 1, 'model__penalty': 'l2'}
+2026-07-06 14:39:36 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\logistic_regression.joblib
+2026-07-06 14:39:36 | INFO     | src.trainer | Logistic Regression completed in 43.51 seconds.
+2026-07-06 14:39:36 | INFO     | src.trainer | ======================================================================
+2026-07-06 14:39:36 | INFO     | src.trainer | Training KNN
+2026-07-06 14:39:36 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 14:41:57 | INFO     | src.trainer | Best Score: 0.8370
+2026-07-06 14:41:57 | INFO     | src.trainer | Best Parameters: {'model__n_neighbors': 9, 'model__weights': 'uniform'}
+2026-07-06 14:41:57 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\knn.joblib
+2026-07-06 14:41:57 | INFO     | src.trainer | KNN completed in 141.62 seconds.
+2026-07-06 14:41:57 | INFO     | src.trainer | ======================================================================
+2026-07-06 14:41:57 | INFO     | src.trainer | Training SVM
+2026-07-06 14:52:56 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\svm.joblib
+2026-07-06 14:52:56 | INFO     | src.trainer | SVM completed in 659.02 seconds.
+2026-07-06 14:52:56 | INFO     | src.trainer | ======================================================================
+2026-07-06 14:52:56 | INFO     | src.trainer | Training Naive Bayes
+2026-07-06 14:52:57 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\naive_bayes.joblib
+2026-07-06 14:52:57 | INFO     | src.trainer | Naive Bayes completed in 0.37 seconds.
+2026-07-06 14:52:57 | INFO     | src.trainer | ======================================================================
+2026-07-06 14:52:57 | INFO     | src.trainer | Training Decision Tree
+2026-07-06 14:52:57 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 14:53:40 | INFO     | src.trainer | Best Score: 0.8542
+2026-07-06 14:53:40 | INFO     | src.trainer | Best Parameters: {'model__max_depth': 10, 'model__min_samples_split': 10}
+2026-07-06 14:53:40 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\decision_tree.joblib
+2026-07-06 14:53:40 | INFO     | src.trainer | Decision Tree completed in 42.81 seconds.
+2026-07-06 14:53:40 | INFO     | src.trainer | ======================================================================
+2026-07-06 14:53:40 | INFO     | src.trainer | Training Random Forest
+2026-07-06 14:53:40 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 15:04:55 | INFO     | src.trainer | Best Score: 0.8620
+2026-07-06 15:04:55 | INFO     | src.trainer | Best Parameters: {'model__max_depth': 20, 'model__min_samples_split': 5, 'model__n_estimators': 100}
+2026-07-06 15:04:55 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\random_forest.joblib
+2026-07-06 15:04:55 | INFO     | src.trainer | Random Forest completed in 675.66 seconds.
+2026-07-06 15:04:55 | INFO     | src.trainer | ======================================================================
+2026-07-06 15:04:55 | INFO     | src.trainer | Training XGBoost
+2026-07-06 15:04:55 | INFO     | src.trainer | Running GridSearchCV...
+2026-07-06 15:09:40 | INFO     | src.trainer | Best Score: 0.8736
+2026-07-06 15:09:40 | INFO     | src.trainer | Best Parameters: {'model__learning_rate': 0.1, 'model__max_depth': 6, 'model__n_estimators': 200}
+2026-07-06 15:09:40 | INFO     | src.trainer | Model saved to D:\AI-Learn\week 3\Machine Learning\FINAL-PROJECT-income-classification-comparison\models\xgboost.joblib
+2026-07-06 15:09:40 | INFO     | src.trainer | XGBoost completed in 284.52 seconds.
+2026-07-06 15:09:40 | INFO     | src.trainer | All models trained successfully.
+2026-07-06 15:09:40 | INFO     | src.evaluator | Starting model evaluation...
+2026-07-06 15:09:40 | INFO     | src.evaluator | Evaluating Logistic Regression...
+2026-07-06 15:09:40 | INFO     | src.evaluator | Evaluating KNN...
+2026-07-06 15:10:06 | INFO     | src.evaluator | Evaluating SVM...
+2026-07-06 15:10:55 | INFO     | src.evaluator | Evaluating Naive Bayes...
+2026-07-06 15:10:55 | INFO     | src.evaluator | Evaluating Decision Tree...
+2026-07-06 15:10:55 | INFO     | src.evaluator | Evaluating Random Forest...
+2026-07-06 15:10:55 | INFO     | src.evaluator | Evaluating XGBoost...
+2026-07-06 15:10:56 | INFO     | src.evaluator | Evaluation completed successfully.
+2026-07-06 15:10:56 | INFO     | src.visualization | Generating visualizations...
+2026-07-06 15:11:20 | INFO     | src.visualization | All visualizations generated successfully.
+2026-07-06 15:11:20 | INFO     | __main__ | ================================================================================
+2026-07-06 15:11:20 | INFO     | __main__ | Pipeline completed successfully.
+2026-07-06 15:11:20 | INFO     | __main__ | ================================================================================
