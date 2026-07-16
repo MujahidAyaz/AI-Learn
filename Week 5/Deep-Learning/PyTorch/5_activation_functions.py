@@ -1,102 +1,96 @@
-# PyTorch Activation Functions
+"""
+
+
+Topics Covered
+--------------
+1. ReLU
+2. Sigmoid
+3. Tanh
+4. Softmax
+5. Real World Example
+"""
+
 import torch
 import torch.nn as nn
 
-# Some common activation functions are:
+# ----------------------------------------------------
+# Create Sample Input
+# ----------------------------------------------------
 
+x = torch.tensor([-3., -2., -1., 0., 1., 2., 3.])
 
-import torch
-import torch.nn as nn
+print("=" * 60)
+print("Original Tensor")
+print("=" * 60)
+print(x)
 
-#nn.ReLU()
-relu = nn.ReLU()
-x = torch.tensor([-3., -1., 0., 2., 5.])
-print(relu(x))
-"""
-Why is ReLU Popular?
-
-Advantages:
-Very fast
-Easy to compute
-Helps deep networks train efficiently
-Reduces vanishing gradient problems
-
-Today, ReLU is the default activation in most hidden layers.
-"""
-
-#nn.Sigmoid()
-
-sigmoid = nn.Sigmoid()
-x = torch.tensor([-3., 0., 3.])
-print(sigmoid(x))
-"""
-When is Sigmoid Used?
-
-Mostly:
-Binary Classification
-Probability outputs
-
-Problem with Sigmoid
-When values become very large or very small:
-Gradient
-↓
-Almost Zero
-This causes the Vanishing Gradient Problem, making deep networks hard to train.
-For this reason, Sigmoid is rarely used in hidden layers today.
-"""
-#nn.Tanh()
-
-tanh = nn.Tanh()
-x = torch.tensor([-3., 0., 3.])
-print(tanh(x))
-"""
-Why Tanh Was Popular
-Unlike Sigmoid:
-Centered around 0
-This often helps optimization.
-However, it can still suffer from vanishing gradients.
-"""
-
-#nn.Softmax(dim=1)
-# Softmax converts raw scores into probabilities that sum to 1.
-# Example:
-
-softmax = nn.Softmax(dim=1)
-scores = torch.tensor([[2.0, 1.0, 0.1]])
-print(softmax(scores))
-
-"""
-Which Activation Should You Use?
-
-For hidden layers:
-✅ ReLU
-
-For binary classification output:
-✅ Sigmoid
-
-For multi-class classification output:
-✅ Softmax
-
-Tanh is less common today but still appears in some architectures.
-"""
-
-# Mini Project
-print("----------Mini Project----------")
-import torch
-import torch.nn as nn
-
-x = torch.tensor([-2., -1., 0., 1., 2.])
+# ----------------------------------------------------
+# ReLU Activation
+# ----------------------------------------------------
 
 relu = nn.ReLU()
+
+relu_output = relu(x)
+
+print("\nReLU Output")
+print(relu_output)
+
+# ----------------------------------------------------
+# Sigmoid Activation
+# ----------------------------------------------------
+
 sigmoid = nn.Sigmoid()
+
+sigmoid_output = sigmoid(x)
+
+print("\nSigmoid Output")
+print(sigmoid_output)
+
+# ----------------------------------------------------
+# Tanh Activation
+# ----------------------------------------------------
+
 tanh = nn.Tanh()
 
-print("Original :", x)
-print("ReLU     :", relu(x))
-print("Sigmoid  :", sigmoid(x))
-print("Tanh     :", tanh(x))
+tanh_output = tanh(x)
 
-# Then create:
-scores = torch.tensor([[3.0, 1.0, 0.2]])
+print("\nTanh Output")
+print(tanh_output)
+
+# ----------------------------------------------------
+# Softmax Example
+# ----------------------------------------------------
+
+scores = torch.tensor([[2.0, 1.0, 0.5]])
+
 softmax = nn.Softmax(dim=1)
-print(softmax(scores))
+
+probabilities = softmax(scores)
+
+print("\nSoftmax Probabilities")
+print(probabilities)
+
+print("\nSum of Probabilities")
+print(probabilities.sum())
+
+# ----------------------------------------------------
+# Real World Example
+# ----------------------------------------------------
+
+model = nn.Sequential(
+    nn.Linear(4, 8),
+    nn.ReLU(),
+    nn.Linear(8, 3)
+)
+
+sample = torch.rand(2, 4)
+
+prediction = model(sample)
+
+print("\nModel Output")
+print(prediction)
+
+print("\nOutput Shape")
+print(prediction.shape)
+
+print("\nLesson Completed Successfully!")
