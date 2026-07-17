@@ -14,8 +14,6 @@ Responsibilities
 4. Save best model checkpoint
 5. Return training history
 
-Author : Mujahid Ayaz
-Repository : AI-Learn
 ============================================================
 """
 
