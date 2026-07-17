@@ -106,3 +106,19 @@ PRINT_EVERY = 1
 NUM_PREDICTIONS = 10
 
 PREDICTION_FIGURE = "prediction_results.png"
+
+# ==========================================================
+# Early Stopping
+# ==========================================================
+
+PATIENCE = 5
+
+MIN_DELTA = 0.1
+
+# ==========================================================
+# Learning Rate Scheduler
+# ==========================================================
+
+SCHEDULER_FACTOR = 0.5
+SCHEDULER_PATIENCE = 2
+MIN_LR = 1e-6

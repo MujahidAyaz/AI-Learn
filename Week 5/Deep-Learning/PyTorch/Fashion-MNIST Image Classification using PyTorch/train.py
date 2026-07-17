@@ -113,7 +113,13 @@ def main():
         model.parameters(),
         lr=LEARNING_RATE,
     )
-
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer=optimizer,
+        mode="min",
+        factor=SCHEDULER_FACTOR,
+        patience=SCHEDULER_PATIENCE,
+        min_lr=MIN_LR,
+    )
     # ------------------------------------------------------
     # Train Model
     # ------------------------------------------------------
@@ -124,6 +130,7 @@ def main():
         test_loader=test_loader,
         criterion=criterion,
         optimizer=optimizer,
+        scheduler=scheduler,
         device=DEVICE,
         epochs=EPOCHS,
         model_name=BEST_MODEL_NAME,

@@ -25,6 +25,8 @@ import torch
 from tqdm import tqdm
 from src.checkpoint import save_checkpoint
 from src.logger import logger
+from src.early_stopping import EarlyStopping
+from configs.config import PATIENCE, MIN_DELTA
 
 # ==========================================================
 # Train One Epoch
@@ -200,6 +202,7 @@ def train(
     test_loader,
     criterion,
     optimizer,
+    scheduler,
     device,
     epochs,
     model_name,
@@ -243,7 +246,12 @@ def train(
 
     best_accuracy = 0.0
 
-    print("\nStarting Training...\n")
+    early_stopping = EarlyStopping(
+    patience=PATIENCE,
+    min_delta=MIN_DELTA,
+    )
+
+    logger.info("Starting Training...")
 
     for epoch in range(epochs):
 
@@ -262,6 +270,13 @@ def train(
             device=device,
         )
 
+        # ==========================================================
+        # Update Learning Rate Scheduler
+        # ==========================================================
+
+        scheduler.step(val_loss)
+        current_lr = optimizer.param_groups[0]["lr"]
+
         history["train_loss"].append(train_loss)
         history["train_accuracy"].append(train_accuracy)
         history["val_loss"].append(val_loss)
@@ -272,7 +287,8 @@ def train(
             f"Train Loss: {train_loss:.4f} | "
             f"Train Acc: {train_accuracy:.2f}% | "
             f"Val Loss: {val_loss:.4f} | "
-            f"Val Acc: {val_accuracy:.2f}%"
+            f"Val Acc: {val_accuracy:.2f}% | "
+            f"Learning Rate: {current_lr:.6f}"
         )
 
         if val_accuracy > best_accuracy:
@@ -283,6 +299,18 @@ def train(
                 model=model,
                 filename=model_name,
             )
+
+        # ----------------------------------------
+        # Early Stopping
+        # ----------------------------------------
+
+        early_stopping(val_accuracy)
+
+        if early_stopping.early_stop:
+
+            logger.info("Early stopping triggered!")
+
+            break
 
     logger.info("Training Completed Successfully!")
 
