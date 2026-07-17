@@ -88,3 +88,13 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # ==========================================================
 
 RANDOM_SEED = 42
+
+# ==========================================================
+# Checkpoint Configuration
+# ==========================================================
+
+BEST_MODEL_NAME = "best_model.pth"
+
+SAVE_BEST_ONLY = True
+
+PRINT_EVERY = 1

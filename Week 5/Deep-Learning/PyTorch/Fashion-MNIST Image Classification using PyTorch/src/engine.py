@@ -3,14 +3,19 @@
 Training Engine
 ============================================================
 
-This module contains the training and validation logic
-for the Fashion-MNIST classifier.
+This module contains the complete training pipeline for the
+Fashion-MNIST classifier.
 
 Responsibilities
 ----------------
-1. Train the model
-2. Validate the model
-3. Return loss and accuracy
+1. Train model for one epoch
+2. Validate model
+3. Manage complete training loop
+4. Save best model checkpoint
+5. Return training history
+
+Author : Mujahid Ayaz
+Repository : AI-Learn
 ============================================================
 """
 
@@ -20,52 +25,74 @@ Responsibilities
 
 import torch
 
+from src.checkpoint import save_checkpoint
+
 
 # ==========================================================
-# Training Function
+# Train One Epoch
 # ==========================================================
 
-def train_one_epoch(model, dataloader, criterion, optimizer, device):
+def train_one_epoch(
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    device,
+):
     """
-    Trains the model for one epoch.
+    Train the model for one epoch.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Neural network model.
+
+    dataloader : DataLoader
+        Training dataloader.
+
+    criterion :
+        Loss function.
+
+    optimizer :
+        Optimizer.
+
+    device :
+        CPU or CUDA device.
+
+    Returns
+    -------
+    tuple
+        (epoch_loss, epoch_accuracy)
     """
 
-    # Set model to training mode
     model.train()
 
-    running_loss = 0
+    running_loss = 0.0
     correct_predictions = 0
     total_samples = 0
 
     for images, labels in dataloader:
 
-        # Move tensors to CPU/GPU
         images = images.to(device)
         labels = labels.to(device)
 
-        # Step 1
         optimizer.zero_grad()
 
-        # Step 2
         outputs = model(images)
 
-        # Step 3
         loss = criterion(outputs, labels)
 
-        # Step 4
         loss.backward()
 
-        # Step 5
         optimizer.step()
 
-        # Track loss
         running_loss += loss.item()
 
-        # Get predicted class
         predictions = outputs.argmax(dim=1)
 
-        # Count correct predictions
-        correct_predictions += (predictions == labels).sum().item()
+        correct_predictions += (
+            predictions == labels
+        ).sum().item()
 
         total_samples += labels.size(0)
 
@@ -79,17 +106,27 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
 
 
 # ==========================================================
-# Validation Function
+# Validation
 # ==========================================================
 
-def validate(model, dataloader, criterion, device):
+def validate(
+    model,
+    dataloader,
+    criterion,
+    device,
+):
     """
-    Evaluates the model.
+    Evaluate the model.
+
+    Returns
+    -------
+    tuple
+        (validation_loss, validation_accuracy)
     """
 
     model.eval()
 
-    running_loss = 0
+    running_loss = 0.0
     correct_predictions = 0
     total_samples = 0
 
@@ -121,3 +158,104 @@ def validate(model, dataloader, criterion, device):
     ) * 100
 
     return epoch_loss, epoch_accuracy
+
+
+# ==========================================================
+# Complete Training Pipeline
+# ==========================================================
+
+def train(
+    model,
+    train_loader,
+    test_loader,
+    criterion,
+    optimizer,
+    device,
+    epochs,
+    model_name,
+):
+    """
+    Complete training pipeline.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+
+    train_loader : DataLoader
+
+    test_loader : DataLoader
+
+    criterion :
+        Loss function.
+
+    optimizer :
+        Optimizer.
+
+    device :
+        CPU / CUDA
+
+    epochs : int
+
+    model_name : str
+
+    Returns
+    -------
+    dict
+        Training history.
+    """
+
+    history = {
+        "train_loss": [],
+        "train_accuracy": [],
+        "val_loss": [],
+        "val_accuracy": [],
+    }
+
+    best_accuracy = 0.0
+
+    print("\nStarting Training...\n")
+
+    for epoch in range(epochs):
+
+        train_loss, train_accuracy = train_one_epoch(
+            model=model,
+            dataloader=train_loader,
+            criterion=criterion,
+            optimizer=optimizer,
+            device=device,
+        )
+
+        val_loss, val_accuracy = validate(
+            model=model,
+            dataloader=test_loader,
+            criterion=criterion,
+            device=device,
+        )
+
+        history["train_loss"].append(train_loss)
+        history["train_accuracy"].append(train_accuracy)
+        history["val_loss"].append(val_loss)
+        history["val_accuracy"].append(val_accuracy)
+
+        print(
+            f"Epoch [{epoch + 1}/{epochs}] | "
+            f"Train Loss: {train_loss:.4f} | "
+            f"Train Acc: {train_accuracy:.2f}% | "
+            f"Val Loss: {val_loss:.4f} | "
+            f"Val Acc: {val_accuracy:.2f}%"
+        )
+
+        if val_accuracy > best_accuracy:
+
+            best_accuracy = val_accuracy
+
+            save_checkpoint(
+                model=model,
+                filename=model_name,
+            )
+
+    print("\nTraining Completed Successfully!")
+
+    print(f"Best Validation Accuracy : {best_accuracy:.2f}%")
+
+    return history
