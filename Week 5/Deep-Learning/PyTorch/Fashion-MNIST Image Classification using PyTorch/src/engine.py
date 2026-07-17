@@ -24,7 +24,7 @@ Responsibilities
 import torch
 from tqdm import tqdm
 from src.checkpoint import save_checkpoint
-
+from src.logger import logger
 
 # ==========================================================
 # Train One Epoch
@@ -267,7 +267,7 @@ def train(
         history["val_loss"].append(val_loss)
         history["val_accuracy"].append(val_accuracy)
 
-        print(
+        logger.info(
             f"Epoch [{epoch + 1}/{epochs}] | "
             f"Train Loss: {train_loss:.4f} | "
             f"Train Acc: {train_accuracy:.2f}% | "
@@ -284,8 +284,10 @@ def train(
                 filename=model_name,
             )
 
-    print("\nTraining Completed Successfully!")
+    logger.info("Training Completed Successfully!")
 
-    print(f"Best Validation Accuracy : {best_accuracy:.2f}%")
+    logger.info(
+    f"Best Validation Accuracy : {best_accuracy:.2f}%"
+    )
 
     return history

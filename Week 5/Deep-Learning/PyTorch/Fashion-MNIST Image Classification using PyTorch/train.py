@@ -28,6 +28,7 @@ import torch.nn as nn
 import torch.optim as optim
 from src.visualization import generate_training_plots
 from tqdm import tqdm
+from src.logger import logger
 
 # ==========================================================
 # Import Project Modules
@@ -57,9 +58,9 @@ from src.utils import (
 
 def main():
 
-    print("=" * 60)
-    print("Fashion-MNIST Image Classification")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Fashion-MNIST Image Classification")
+    logger.info("=" * 60)
 
     # ------------------------------------------------------
     # Project Setup
@@ -69,7 +70,7 @@ def main():
 
     set_random_seed()
 
-    print(f"\nUsing Device : {DEVICE}")
+    logger.info(f"Using Device : {DEVICE}")
 
     # ------------------------------------------------------
     # Load Dataset
@@ -131,7 +132,7 @@ def main():
 
     generate_training_plots(history)
 
-    print("\nTraining Finished Successfully!")
+    logger.info("Training Finished Successfully!")
 
     return history
 

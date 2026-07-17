@@ -15,6 +15,7 @@ import torch
 from pathlib import Path
 
 from configs.config import MODEL_DIR
+from src.logger import logger
 
 
 # ==========================================================
@@ -41,6 +42,6 @@ def save_checkpoint(model, filename="best_model.pth"):
         checkpoint_path
     )
 
-    print(f"\nModel saved successfully!")
+    logger.info("Best model saved successfully.")
 
     print(checkpoint_path)
