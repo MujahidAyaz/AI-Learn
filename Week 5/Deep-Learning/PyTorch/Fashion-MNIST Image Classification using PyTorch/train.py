@@ -26,6 +26,7 @@ Responsibilities
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from src.visualization import generate_training_plots
 
 # ==========================================================
 # Import Project Modules
@@ -125,6 +126,9 @@ def main():
         epochs=EPOCHS,
         model_name=BEST_MODEL_NAME,
     )
+
+
+    generate_training_plots(history)
 
     print("\nTraining Finished Successfully!")
 
