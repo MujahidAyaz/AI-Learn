@@ -27,6 +27,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from src.visualization import generate_training_plots
+from tqdm import tqdm
 
 # ==========================================================
 # Import Project Modules

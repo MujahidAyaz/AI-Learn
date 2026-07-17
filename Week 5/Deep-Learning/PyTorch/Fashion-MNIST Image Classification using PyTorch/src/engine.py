@@ -22,7 +22,7 @@ Responsibilities
 # ==========================================================
 
 import torch
-
+from tqdm import tqdm
 from src.checkpoint import save_checkpoint
 
 
@@ -69,7 +69,13 @@ def train_one_epoch(
     correct_predictions = 0
     total_samples = 0
 
-    for images, labels in dataloader:
+
+    progress_bar = tqdm(
+    dataloader,
+    desc="Training",
+    leave=False,
+    )
+    for images, labels in progress_bar:
 
         images = images.to(device)
         labels = labels.to(device)
@@ -87,6 +93,16 @@ def train_one_epoch(
         running_loss += loss.item()
 
         predictions = outputs.argmax(dim=1)
+
+        batch_accuracy = (
+            (predictions == labels).sum().item()
+            / labels.size(0)
+        ) * 100
+
+        progress_bar.set_postfix(
+            Loss=f"{loss.item():.4f}",
+            Acc=f"{batch_accuracy:.2f}%"
+        )
 
         correct_predictions += (
             predictions == labels
@@ -130,7 +146,13 @@ def validate(
 
     with torch.no_grad():
 
-        for images, labels in dataloader:
+        progress_bar = tqdm(
+        dataloader,
+        desc="Validation",
+        leave=False,
+    )
+
+        for images, labels in progress_bar:
 
             images = images.to(device)
             labels = labels.to(device)
@@ -142,6 +164,16 @@ def validate(
             running_loss += loss.item()
 
             predictions = outputs.argmax(dim=1)
+
+            batch_accuracy = (
+                (predictions == labels).sum().item()
+                / labels.size(0)
+            ) * 100
+
+            progress_bar.set_postfix(
+                Loss=f"{loss.item():.4f}",
+                Acc=f"{batch_accuracy:.2f}%"
+            )
 
             correct_predictions += (
                 predictions == labels
