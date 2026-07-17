@@ -29,6 +29,7 @@ import torch.optim as optim
 from src.visualization import generate_training_plots
 from tqdm import tqdm
 from src.logger import logger
+from src.history import save_history
 
 # ==========================================================
 # Import Project Modules
@@ -39,6 +40,9 @@ from configs.config import (
     EPOCHS,
     LEARNING_RATE,
     BEST_MODEL_NAME,
+    MIN_LR,
+    SCHEDULER_FACTOR,
+    SCHEDULER_PATIENCE,
 )
 
 from src.dataset import create_dataloaders
@@ -136,7 +140,7 @@ def main():
         model_name=BEST_MODEL_NAME,
     )
 
-
+    save_history(history)
     generate_training_plots(history)
 
     logger.info("Training Finished Successfully!")
