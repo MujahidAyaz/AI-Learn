@@ -98,3 +98,11 @@ BEST_MODEL_NAME = "best_model.pth"
 SAVE_BEST_ONLY = True
 
 PRINT_EVERY = 1
+
+# ==========================================================
+# Prediction Configuration
+# ==========================================================
+
+NUM_PREDICTIONS = 10
+
+PREDICTION_FIGURE = "prediction_results.png"

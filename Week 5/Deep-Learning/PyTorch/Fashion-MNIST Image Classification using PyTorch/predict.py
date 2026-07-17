@@ -3,19 +3,30 @@
 Prediction Script
 ============================================================
 
-Loads a trained Fashion-MNIST model and predicts
-classes for test images.
+Loads the trained Fashion-MNIST model and predicts
+random test images.
+
+Author : Mujahid Ayaz
 ============================================================
 """
 
 # ==========================================================
-# Import Libraries
+# Imports
 # ==========================================================
 
+import random
 import torch
 import matplotlib.pyplot as plt
 
-from configs.config import DEVICE, MODEL_DIR, BEST_MODEL_NAME
+from configs.config import (
+    DEVICE,
+    MODEL_DIR,
+    BEST_MODEL_NAME,
+    OUTPUT_DIR,
+    NUM_PREDICTIONS,
+    PREDICTION_FIGURE,
+)
+
 from src.dataset import create_dataloaders
 from src.model import FashionClassifier
 from src.metrics import evaluate_model
@@ -37,15 +48,11 @@ CLASS_NAMES = [
     "Ankle boot",
 ]
 
-
 # ==========================================================
 # Load Model
 # ==========================================================
 
 def load_model():
-    """
-    Load the trained model.
-    """
 
     model = FashionClassifier()
 
@@ -64,44 +71,96 @@ def load_model():
 
 
 # ==========================================================
-# Predict Sample Images
+# Prediction Visualization
 # ==========================================================
 
-def predict_samples(model, test_loader, num_images=5):
-    """
-    Display predictions for a few test images.
-    """
+def predict_samples(model, dataset):
 
-    images, labels = next(iter(test_loader))
+    plt.figure(figsize=(20,10))
 
-    images = images.to(DEVICE)
-    labels = labels.to(DEVICE)
+    for index in range(NUM_PREDICTIONS):
 
-    with torch.no_grad():
+        random_index = random.randint(
+            0,
+            len(dataset)-1
+        )
 
-        outputs = model(images)
+        image, label = dataset[random_index]
 
-        probabilities = torch.softmax(outputs, dim=1)
+        input_tensor = image.unsqueeze(0).to(DEVICE)
 
-        confidence, predictions = torch.max(probabilities, dim=1)
+        with torch.no_grad():
 
-    plt.figure(figsize=(15, 3))
+            output = model(input_tensor)
 
-    for i in range(num_images):
+            probabilities = torch.softmax(
+                output,
+                dim=1
+            )
 
-        plt.subplot(1, num_images, i + 1)
+            confidence, prediction = torch.max(
+                probabilities,
+                dim=1
+            )
 
-        plt.imshow(images[i].cpu().squeeze(), cmap="gray")
+        predicted = prediction.item()
+
+        actual = label
+
+        is_correct = predicted == actual
+
+        plt.subplot(
+            2,
+            5,
+            index+1
+        )
+
+        plt.imshow(
+            image.squeeze(),
+            cmap="gray"
+        )
 
         plt.axis("off")
 
+        if is_correct:
+
+            color = "green"
+
+            status = " Correct"
+
+        else:
+
+            color = "red"
+
+            status = " Wrong"
+
         plt.title(
-            f"P: {CLASS_NAMES[predictions[i]]}\n"
-            f"T: {CLASS_NAMES[labels[i]]}\n"
-            f"{confidence[i].item()*100:.1f}%"
+            f"{status}\n"
+            f"Prediction : {CLASS_NAMES[predicted]}\n"
+            f"Actual    :{CLASS_NAMES[actual]}\n"
+            f"{confidence.item()*100:.2f}%",
+            fontsize=9,
+            color=color,
         )
 
     plt.tight_layout()
+
+    save_path = (
+        OUTPUT_DIR
+        / "predictions"
+        / PREDICTION_FIGURE
+    )
+
+    save_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    plt.savefig(
+        save_path,
+        dpi=300,
+        bbox_inches="tight",
+    )
 
     plt.show()
 
@@ -112,12 +171,15 @@ def predict_samples(model, test_loader, num_images=5):
 
 def main():
 
-    _, test_loader, _, _ = create_dataloaders()
+    _, test_loader, _, test_dataset = create_dataloaders()
 
     model = load_model()
 
-    predict_samples(model, test_loader)
-    
+    predict_samples(
+        model,
+        test_dataset,
+    )
+
     evaluate_model(
         model=model,
         dataloader=test_loader,
