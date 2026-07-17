@@ -5,9 +5,6 @@ Prediction Script
 
 Loads a trained Fashion-MNIST model and predicts
 classes for test images.
-
-Author : Mujahid Ayaz
-Repository : AI-Learn
 ============================================================
 """
 
@@ -18,10 +15,10 @@ Repository : AI-Learn
 import torch
 import matplotlib.pyplot as plt
 
-from configs.config import DEVICE, MODEL_DIR, BATCH_SIZE
+from configs.config import DEVICE, MODEL_DIR, BEST_MODEL_NAME
 from src.dataset import create_dataloaders
 from src.model import FashionClassifier
-
+from src.metrics import evaluate_model
 
 # ==========================================================
 # Class Names
@@ -54,7 +51,7 @@ def load_model():
 
     model.load_state_dict(
         torch.load(
-            MODEL_DIR / "best_model.pth",
+            MODEL_DIR / BEST_MODEL_NAME,
             map_location=DEVICE,
         )
     )
@@ -120,6 +117,13 @@ def main():
     model = load_model()
 
     predict_samples(model, test_loader)
+    
+    evaluate_model(
+        model=model,
+        dataloader=test_loader,
+        device=DEVICE,
+        class_names=CLASS_NAMES,
+    )
 
 
 if __name__ == "__main__":
