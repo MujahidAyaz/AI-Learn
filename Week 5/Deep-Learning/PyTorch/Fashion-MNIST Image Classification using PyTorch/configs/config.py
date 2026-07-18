@@ -34,6 +34,8 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs"
 # Saved model directory
 MODEL_DIR = PROJECT_ROOT / "saved_models"
 
+LOGS_DIR = PROJECT_ROOT / "logs"
+
 # ==========================================================
 # Dataset Configuration
 # ==========================================================

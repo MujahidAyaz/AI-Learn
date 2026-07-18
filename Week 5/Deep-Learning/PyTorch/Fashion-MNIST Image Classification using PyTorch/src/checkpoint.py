@@ -12,7 +12,6 @@ PyTorch model checkpoints.
 # ==========================================================
 
 import torch
-from pathlib import Path
 
 from configs.config import MODEL_DIR
 from src.logger import logger
@@ -24,7 +23,7 @@ from src.logger import logger
 
 def save_checkpoint(model, filename="best_model.pth"):
     """
-    Saves only the model weights.
+    Save model weights.
 
     Parameters
     ----------
@@ -32,16 +31,16 @@ def save_checkpoint(model, filename="best_model.pth"):
         Trained model.
 
     filename : str
-        Name of checkpoint file.
+        Checkpoint filename.
     """
 
     checkpoint_path = MODEL_DIR / filename
 
     torch.save(
         model.state_dict(),
-        checkpoint_path
+        checkpoint_path,
     )
 
-    logger.info("Best model saved successfully.")
-
-    print(checkpoint_path)
+    logger.info(
+        f"Model checkpoint saved: {checkpoint_path}"
+    )

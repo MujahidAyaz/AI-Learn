@@ -1,15 +1,11 @@
 """
 ============================================================
-Logging Configuration
+Project Logger
 ============================================================
 
-This module configures logging for the project.
+Creates a timestamped log file for every training run.
 
-Responsibilities
-----------------
-1. Create log directory
-2. Configure file logger
-3. Configure console logger
+Author : Mujahid Ayaz
 ============================================================
 """
 
@@ -18,35 +14,64 @@ Responsibilities
 # ==========================================================
 
 import logging
+from datetime import datetime
 
-from configs.config import PROJECT_ROOT
-
+from configs.config import LOGS_DIR
 
 # ==========================================================
-# Log Directory
+# Create Logs Directory
 # ==========================================================
 
-LOG_DIR = PROJECT_ROOT / "logs"
-
-LOG_DIR.mkdir(
+LOGS_DIR.mkdir(
     parents=True,
     exist_ok=True,
 )
 
-LOG_FILE = LOG_DIR / "training.log"
+# ==========================================================
+# Timestamp
+# ==========================================================
 
+timestamp = datetime.now().strftime(
+    "%Y-%m-%d_%H-%M-%S"
+)
+
+log_file = LOGS_DIR / f"training_{timestamp}.log"
 
 # ==========================================================
 # Logger Configuration
 # ==========================================================
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler(),
-    ],
+logger = logging.getLogger("FashionMNIST")
+
+logger.setLevel(logging.INFO)
+
+logger.handlers.clear()
+
+formatter = logging.Formatter(
+    "%(asctime)s | %(levelname)s | %(message)s"
 )
 
-logger = logging.getLogger(__name__)
+# ==========================================================
+# File Handler
+# ==========================================================
+
+file_handler = logging.FileHandler(
+    log_file,
+    encoding="utf-8",
+)
+
+file_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+
+# ==========================================================
+# Console Handler
+# ==========================================================
+
+console_handler = logging.StreamHandler()
+
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
+
+logger.propagate = False

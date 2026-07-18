@@ -299,7 +299,10 @@ def train(
                 model=model,
                 filename=model_name,
             )
-
+            logger.info(
+                f"New Best Validation Accuracy: "
+                f"{best_accuracy:.2f}%"
+            )
         # ----------------------------------------
         # Early Stopping
         # ----------------------------------------
