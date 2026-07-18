@@ -30,7 +30,7 @@ from src.visualization import generate_training_plots
 from tqdm import tqdm
 from src.logger import logger
 from src.history import save_history
-
+from torchinfo import summary
 # ==========================================================
 # Import Project Modules
 # ==========================================================
@@ -43,6 +43,7 @@ from configs.config import (
     MIN_LR,
     SCHEDULER_FACTOR,
     SCHEDULER_PATIENCE,
+    BATCH_SIZE,
 )
 
 from src.dataset import create_dataloaders
@@ -100,8 +101,27 @@ def main():
 
     model = FashionClassifier().to(DEVICE)
 
-    print("\nModel Architecture\n")
+    logger.info("=" * 60)
+    logger.info("Model Architecture")
+    logger.info("=" * 60)
+
     print(model)
+
+    logger.info("=" * 60)
+    logger.info("Model Summary")
+    logger.info("=" * 60)
+
+    summary(
+        model,
+        input_size=(BATCH_SIZE, 1, 28, 28),
+        col_names=(
+            "input_size",
+            "output_size",
+            "num_params",
+            "trainable",
+        ),
+        verbose=1,
+    )
 
     # ------------------------------------------------------
     # Loss Function
