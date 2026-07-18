@@ -13,7 +13,7 @@ Save training metrics to a CSV file.
 
 import csv
 
-from configs.config import OUTPUTS_DIR
+from configs.config import OUTPUT_DIR
 from src.logger import logger
 
 
@@ -26,7 +26,7 @@ def save_history(history):
     Save training history as CSV.
     """
 
-    output_file = OUTPUTS_DIR / "training_history.csv"
+    output_file = OUTPUT_DIR / "training_history.csv"
 
     with open(output_file, "w", newline="") as csv_file:
 
